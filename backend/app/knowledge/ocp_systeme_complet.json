@@ -1,0 +1,124 @@
+
+
+{
+  "entreprise": {
+    "nom": "OCP Group",
+    "pays": "Maroc",
+    "creation": 1920,
+    "secteur": "Phosphate et engrais",
+    "description": "Leader mondial dans l'extraction, la transformation et l'exportation des phosphates."
+  },
+  "sites": [
+    {
+      "ville": "Khouribga",
+      "type": "Mine",
+      "activites": ["Extraction", "Traitement primaire"],
+      "description": "Plus grande mine de phosphate au monde"
+    },
+    {
+      "ville": "Benguerir",
+      "type": "Mine + Recherche",
+      "activites": ["Extraction", "Recherche", "Innovation"],
+      "institutions": ["UM6P"]
+    },
+    {
+      "ville": "Youssoufia",
+      "type": "Mine",
+      "activites": ["Extraction"]
+    },
+    {
+      "ville": "Safi",
+      "type": "Transformation",
+      "activites": ["Acide phosphorique", "Engrais"]
+    },
+    {
+      "ville": "Jorf Lasfar",
+      "type": "Complexe industriel",
+      "activites": ["Transformation chimique", "Exportation"],
+      "description": "Plus grand site industriel OCP"
+    },
+    {
+      "ville": "Casablanca",
+      "type": "Siège",
+      "activites": ["Management", "Finance", "Stratégie"]
+    }
+  ],
+  "processus_industriel": {
+    "etapes": [
+      {
+        "nom": "Extraction",
+        "description": "Extraction du phosphate brut dans les mines",
+        "entree": "Roche phosphatée",
+        "sortie": "Phosphate brut"
+      },
+      {
+        "nom": "Traitement primaire",
+        "description": "Lavage, concassage et criblage",
+        "entree": "Phosphate brut",
+        "sortie": "Phosphate enrichi"
+      },
+      {
+        "nom": "Transport",
+        "description": "Transport via pipeline ou train",
+        "entree": "Phosphate enrichi",
+        "sortie": "Phosphate transporté"
+      },
+      {
+        "nom": "Transformation chimique",
+        "description": "Production d'acide phosphorique",
+        "entree": "Phosphate + acide sulfurique",
+        "sortie": "Acide phosphorique"
+      },
+      {
+        "nom": "Production d'engrais",
+        "description": "Fabrication DAP, MAP, NPK",
+        "entree": "Acide phosphorique",
+        "sortie": "Engrais"
+      },
+      {
+        "nom": "Exportation",
+        "description": "Distribution mondiale",
+        "entree": "Engrais",
+        "sortie": "Marché international"
+      }
+    ]
+  },
+  "logistique": {
+    "transport": ["Pipeline Khouribga-Jorf", "Train"],
+    "export": ["Afrique", "Europe", "Asie", "Amérique"]
+  },
+  "metiers": [
+    "Ingénieur procédés",
+    "Data Scientist",
+    "Ingénieur maintenance",
+    "Technicien industriel",
+    "Responsable logistique"
+  ],
+  "technologies": [
+    "Big Data",
+    "Intelligence Artificielle",
+    "IoT",
+    "Automatisation industrielle"
+  ],
+  "applications_ml": [
+    "Prédiction de qualité du phosphate",
+    "Maintenance prédictive",
+    "Détection d'anomalies",
+    "Optimisation du transport",
+    "Prévision de production"
+  ],
+  "faq": [
+    {
+      "question": "Qu'est-ce que OCP ?",
+      "reponse": "Une entreprise marocaine leader dans les phosphates"
+    },
+    {
+      "question": "Où se trouvent les sites OCP ?",
+      "reponse": "Khouribga, Benguerir, Safi, Jorf Lasfar, Casablanca..."
+    },
+    {
+      "question": "Quel est le processus industriel ?",
+      "reponse": "Extraction → Traitement → Transport → Transformation → Engrais → Export"
+    }
+  ]
+}

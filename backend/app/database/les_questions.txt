@@ -1,0 +1,36 @@
+Quels équipements appartiennent au groupe "Groupe I F P2" a Safi ?
+Quels sont les équipements présentant actuellement un problème de roulement a NTN ?
+Depuis combien de temps l'équipement Turbosoufflante KT7301 présente-t-il un problème de Bearing Wear a Safi?
+Quel est le statut actuel de l'équipement S-PM-41GTAB-T  a Safi?
+L'équipement 03XYP23/M possède-t-il une référence connue ou un unknown ?
+Quels sont les équipements en alarme critique aujourd'hui ?
+Quel est l'équipement ayant aujourd'hui la NGV la plus élevée au-dessus du seuil, sans être un outlier et sans effet ski-slope ?
+Quelle est l'asset à grand température aujourd'hui ?
+Quels équipements présentent un problème de lubrification sans défaut de roulement ?
+Quels sont les équipements ayant des mesures invalides à cause d'un défaut capteur ?
+Quels équipements ont été exclus comme outliers aujourd'hui ?
+Quel équipement présente simultanément un défaut de roulement et un problème de lubrification ?
+Affiche les équipements avec leur durée de transition?
+Quels sont les équipements avec un défaut actif de type 'Normal' ?
+Quels sont les équipements avec un défaut actif de type 'Bearing Wear - Rolling Element' ?
+Quels sont les équipements avec un défaut actif de type 'Bearing Wear - Inner Race' ?
+Quels sont les équipements avec un défaut actif de type 'Bearing Wear - Outer Race' ?
+Quels sont les équipements avec un défaut actif de type 'Outliers' ?
+Quels sont les équipements avec un défaut actif de type 'Sensor Saturation' ?
+Quels sont les équipements avec un défaut actif de type 'Fault sensor' ?
+Quels sont les équipements avec un défaut actif de type 'Friction' ?
+Quels sont les équipements avec un défaut actif de type 'Structural Fault' ?
+Quels sont les équipements avec un défaut actif de type 'Bearing Wear' ?
+Quels sont les équipements avec un défaut actif de type 'Cavitation Fault' ?
+Quels sont les équipements avec un défaut actif de type 'AC Electrical Fault' ?
+Quels sont les équipements avec un défaut actif de type 'DC Electrical Fault' ?
+Quels sont les équipements avec un défaut actif de type 'Aerial Fault' ?
+Quels sont les équipements avec un défaut actif de type 'Gear Fault' ?
+Quels sont les équipements avec un défaut actif de type 'Imbalance' ?
+Quels sont les équipements avec un défaut actif de type 'Mechanical looseness' ?
+Quels sont les équipements avec un défaut actif de type 'Lubrification' ?
+Quels sont les équipements avec un défaut actif de type 'Misalignment' ?
+Quels sont les équipements avec un défaut actif de type 'Turbulence d'huile' ?
+Quels sont les équipements avec un défaut actif de type 'Belt Fault' ?
+Quels sont les équipements avec un défaut actif de type 'shutdown' ?
+Quels sont les équipements avec un défaut actif de type 'Ski slope' ?
