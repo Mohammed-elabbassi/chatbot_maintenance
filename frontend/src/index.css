@@ -1,0 +1,59 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-primary: #0d1b2e;
+  --bg-secondary: #0f2744;
+  --bg-card: #122d4b;
+  --bg-hover: #1a3a5e;
+  --bg-active: #1e4976;
+  --accent-teal: #00c9b1;
+  --accent-teal-dim: #009e8d;
+  --accent-blue: #2196f3;
+  --accent-blue-dim: #1565c0;
+  --text-primary: #e8f4f8;
+  --text-secondary: #8fb5cc;
+  --text-muted: #4d7a96;
+  --border-color: #1e4060;
+  --border-active: #00c9b1;
+  --danger: #ef5350;
+  --success: #4caf50;
+  --warning: #ff9800;
+  --shadow-deep: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 20px rgba(0, 201, 177, 0.15);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-main: 'Exo 2', sans-serif;
+  --font-display: 'Rajdhani', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-teal-dim); }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 10px rgba(0,201,177,0.3); } 50% { box-shadow: 0 0 25px rgba(0,201,177,0.6); } }
+
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+.slide-in { animation: slideIn 0.3s ease forwards; }
