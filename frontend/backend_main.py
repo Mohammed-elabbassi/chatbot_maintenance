@@ -29,9 +29,9 @@ def get_planner():
         try:
             from app.agents.planner_agent_v8 import PlannerAgentV8
             _planner = PlannerAgentV8()
-            print("[API] ✅ PlannerAgentV8 chargé.")
+            print("[API]  PlannerAgentV8 chargé.")
         except Exception as e:
-            print(f"[API] ⚠️  PlannerAgentV8 non disponible : {e}")
+            print(f"[API]   PlannerAgentV8 non disponible : {e}")
     return _planner
 
 

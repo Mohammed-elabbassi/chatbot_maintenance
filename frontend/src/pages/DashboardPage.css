@@ -1,4 +1,5 @@
-/* src/pages/DashboardPage.css */
+
+ src/pages/DashboardPage.css
 
 /* ── Layout ────────────────────────────────────────────────────────────── */
 .dashboard {
@@ -568,3 +569,5 @@
   line-height: 1.3;
 }
 .option-card.active .option-label { color: var(--text-primary); }
+
+ 

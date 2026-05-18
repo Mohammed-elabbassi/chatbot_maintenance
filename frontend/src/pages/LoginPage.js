@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginUser } from '../services/api';
 import './LoginPage.css';
+const MyLogo = require('./logo.png');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -47,17 +48,11 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="login-logo">
           <div className="logo-icon">
-            <svg viewBox="0 0 40 40" fill="none">
-              <circle cx="20" cy="20" r="19" stroke="#00c9b1" strokeWidth="2"/>
-              <path d="M12 24 Q14 16 20 14 Q26 12 28 18 Q30 24 24 28" stroke="#00c9b1" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              <circle cx="15" cy="22" r="2" fill="#00c9b1"/>
-              <circle cx="20" cy="20" r="2" fill="#00c9b1"/>
-              <circle cx="25" cy="22" r="2" fill="#00c9b1"/>
-            </svg>
+            <img src={MyLogo} alt="Logo" style={{width:'80px', height:'60px', objectFit:'contain'}} />
           </div>
           <div className="logo-text">
             <span className="logo-name">I-Chat</span>
-            <span className="logo-tagline">Votre Assistant Virtuel Intelligent</span>
+            <span className="logo-tagline">Votre Assistant Intelligent</span>
           </div>
         </div>
 
@@ -82,7 +77,7 @@ export default function LoginPage() {
           </div>
 
           <div className="input-group">
-            <span className="input-icon">🔑</span>
+            <span className="input-icon">x</span>
             <input
               type={showPass ? 'text' : 'password'}
               placeholder="Passe"

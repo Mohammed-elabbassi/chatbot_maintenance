@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { sendQuestion, exportExcel } from '../services/api';
 import ReactMarkdown from 'react-markdown';
 import './DashboardPage.css';
+const MyLogo = require('./logo.png');
 
 const RESPONSE_MODES = [
   {
@@ -60,19 +61,7 @@ function TypingIndicator() {
 
 function BotIcon() {
   return (
-    <svg viewBox="0 0 32 32" fill="none">
-      <rect width="32" height="32" rx="16" fill="url(#botGrad)"/>
-      <defs>
-        <linearGradient id="botGrad" x1="0" y1="0" x2="32" y2="32">
-          <stop offset="0%" stopColor="#00c9b1"/>
-          <stop offset="100%" stopColor="#2196f3"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="14" r="2" fill="white"/>
-      <circle cx="20" cy="14" r="2" fill="white"/>
-      <path d="M10 20 Q16 24 22 20" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-      <rect x="14" y="7" width="4" height="3" rx="1" fill="white" opacity="0.8"/>
-    </svg>
+    <img src={MyLogo} alt="Bot" width="32" height="32" style={{objectFit:'contain', borderRadius:'50%', background:'#fff'}} />
   );
 }
 
@@ -144,7 +133,7 @@ function Message({ msg, responseMode, onDownload }) {
               className="download-btn"
               onClick={() => onDownload(msg.data.rows, msg.data.columns)}
             >
-              📥 Télécharger Excel ({msg.data.row_count} lignes)
+               Télécharger Excel ({msg.data.row_count} lignes)
             </button>
           )}
         </div>
@@ -289,29 +278,19 @@ export default function DashboardPage() {
       <header className="topbar">
         <div className="topbar-left">
           <div className="topbar-logo">
-            <svg viewBox="0 0 32 32" fill="none" width="28" height="28">
-              <rect width="32" height="32" rx="8" fill="url(#topGrad)"/>
-              <defs>
-                <linearGradient id="topGrad" x1="0" y1="0" x2="32" y2="32">
-                  <stop offset="0%" stopColor="#00c9b1"/><stop offset="100%" stopColor="#2196f3"/>
-                </linearGradient>
-              </defs>
-              <circle cx="11" cy="14" r="2" fill="white"/>
-              <circle cx="16" cy="12" r="2" fill="white"/>
-              <circle cx="21" cy="14" r="2" fill="white"/>
-            </svg>
-            <span className="topbar-title">CHATBOT MULTI-TENANT</span>
+            <img src={MyLogo} alt="Logo" width="38" height="28" style={{objectFit:'contain'}} />
+            <span className="topbar-title">OMS I-Chat</span>
           </div>
         </div>
         <div className="topbar-center">
           <span className="dashboard-title">
-            Tableau de bord de{' '}
+            Espace{' '}
             <strong>{user.prenom || user.email}</strong>
             {activeTenant && (
               <>
-                {' '}-{' '}
-                <span className="tenant-badge-name">{'{' + activeTenant.id + '}'}</span>{' '}
-                <span className="status-dot">ACTIF</span>
+                {' '}{' '}
+                <span className="status-dot">{'     ' + activeTenant.id + '  '}</span>{' '}
+                <span className="status-dot">🟢</span>
               </>
             )}
           </span>
@@ -335,7 +314,7 @@ export default function DashboardPage() {
         <aside className="tenant-panel">
           <h3 className="panel-title">LISTE DES TENANTS</h3>
           <div className="tenant-search">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"> </span>
             <input
               type="text"
               placeholder="Rechercher"
@@ -358,7 +337,7 @@ export default function DashboardPage() {
                     {isActive ? '●' : isAuth ? '○' : ''}
                   </span>
                   <span className="tenant-check">
-                    {isAuth ? '✅' : '🔒'}
+                    {isAuth ? ' ' : ' '}
                   </span>
                   <span className="tenant-label">{tenant.label}</span>
                   {isAuth && <span className="tenant-allowed">(allowed)</span>}
@@ -429,3 +408,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
+
