@@ -528,7 +528,7 @@ DATASET_400_QUESTIONS = [
         "sql": """
             SELECT id, name, ref, status
             FROM {tenant_db}.assets
-            WHERE status = 0                 -INACIF
+            WHERE status = 0                
             AND deleted_at IS NULL
             ORDER BY name
         """,
@@ -1135,7 +1135,8 @@ DATASET_400_QUESTIONS = [
             ORDER BY af.duration DESC
         """,
         "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
-    },
+    }, 
+     
     {
         "question": "Donne les défauts par famille",
         "sql": """
@@ -2581,7 +2582,1509 @@ DATASET_400_QUESTIONS = [
         """,
         "metadata": {"category": "utilisateurs", "tables": ["notifications"], "tenant_generic": False, "cross_database": True}
     },
+
+
+    # ===============================================group==============================
+    {
+        "question": "Quels équipements appartiennent au groupe 'X' ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status, g.name AS groupe
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.groups g ON a.group_id = g.id
+            WHERE g.name = 'X'
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "groups"], "tenant_generic": True}
+    },
+        {
+        "question": "Combien d'équipements par groupe ?",
+        "sql": """
+            SELECT g.id, g.name AS groupe, COUNT(a.id) AS nb_equipements
+            FROM {tenant_db}.groups g
+            LEFT JOIN {tenant_db}.assets a ON g.id = a.group_id AND a.deleted_at IS NULL
+            WHERE g.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY nb_equipements DESC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["groups", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels sont les groupes sans équipements ?",
+        "sql": """
+            SELECT g.id, g.name AS groupe
+            FROM {tenant_db}.groups g
+            LEFT JOIN {tenant_db}.assets a ON g.id = a.group_id AND a.deleted_at IS NULL
+            WHERE g.deleted_at IS NULL
+            AND a.id IS NULL
+            ORDER BY g.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["groups", "assets"], "tenant_generic": True}
+    },
+
+    {
+        "question": "Quels équipements n'appartiennent à aucun groupe ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status
+            FROM {tenant_db}.assets a
+            WHERE a.group_id IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+
+        {
+        "question": "Quels groupes ont des équipements en état critique ?",
+        "sql": """
+            SELECT g.name AS groupe, COUNT(a.id) AS nb_critiques
+            FROM {tenant_db}.groups g
+            INNER JOIN {tenant_db}.assets a ON g.id = a.group_id
+            WHERE a.status = 5
+            AND a.deleted_at IS NULL
+            AND g.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY nb_critiques DESC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["groups", "assets"], "tenant_generic": True}
+    },
+
+    {
+        "question": "Quel groupe a le plus d'alarmes actives ?",
+        "sql": """
+            SELECT g.name AS groupe, COUNT(al.id) AS nb_alarmes
+            FROM {tenant_db}.groups g
+            INNER JOIN {tenant_db}.assets a ON g.id = a.group_id
+            INNER JOIN {tenant_db}.alarms al ON a.id = al.asset_id
+            WHERE al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            AND g.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY nb_alarmes DESC
+            LIMIT 1;
+        """,
+        "metadata": {"category": "alarmes", "tables": ["groups", "assets", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements du groupe 'X' ont des défauts actifs ?",
+        "sql": """
+            SELECT DISTINCT a.id, a.name, a.ref, f.name AS defaut, af.start_date
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.groups g ON a.group_id = g.id
+            INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+            INNER JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE g.name = 'X'
+            AND af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {"category": "defauts", "tables": ["assets", "groups", "asset_faults", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels sont les groupes verrouillés ?",
+        "sql": """
+            SELECT id, name
+            FROM {tenant_db}.groups
+            WHERE locked = 1
+            AND deleted_at IS NULL
+            ORDER BY name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["groups"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelle est la répartition des statuts d'équipements par groupe ?",
+        "sql": """
+            SELECT g.name AS groupe,
+                   SUM(CASE WHEN a.status = 5 THEN 1 ELSE 0 END) AS critiques,
+                   SUM(CASE WHEN a.status = 3 THEN 1 ELSE 0 END) AS moderes,
+                   SUM(CASE WHEN a.status = 2 THEN 1 ELSE 0 END) AS mid,
+                   SUM(CASE WHEN a.status = 1 THEN 1 ELSE 0 END) AS normaux,
+                   SUM(CASE WHEN a.status = 0 THEN 1 ELSE 0 END) AS arretes,
+                   COUNT(a.id) AS total
+            FROM {tenant_db}.groups g
+            LEFT JOIN {tenant_db}.assets a ON g.id = a.group_id AND a.deleted_at IS NULL
+            WHERE g.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY critiques DESC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["groups", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements par entité ?",
+        "sql": """
+            SELECT e.name AS entite, a.id, a.name, a.ref, a.status
+            FROM {tenant_db}.entities e
+            INNER JOIN {tenant_db}.assets a ON e.id = a.entity_id
+            WHERE a.deleted_at IS NULL
+            ORDER BY e.name, a.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["entities", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels utilisateurs sont associés à l'entité 'X' ?",
+        "sql": """
+            SELECT u.id, u.first_name, u.last_name, u.email, e.name AS entite
+            FROM {tenant_db}.entity_user eu
+            INNER JOIN {tenant_db}.entities e ON eu.entity_id = e.id
+            INNER JOIN i_sense_v3_devenv_db.users u ON eu.user_id = u.id
+            WHERE e.name = 'X'
+            AND eu.deleted_at IS NULL
+            AND u.deleted_at IS NULL
+            ORDER BY u.last_name;
+        """,
+        "metadata": {"category": "utilisateurs", "tables": ["entity_user", "entities", "users"], "tenant_generic": True, "cross_database": True}
+    },
+    {
+        "question": "Combien de pannes actives par groupe cette semaine ?",
+        "sql": """
+            SELECT g.name AS groupe, COUNT(af.id) AS nb_pannes
+            FROM {tenant_db}.groups g
+            INNER JOIN {tenant_db}.assets a ON g.id = a.group_id
+            INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+            WHERE af.start_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND af.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            AND g.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY nb_pannes DESC;
+        """,
+        "metadata": {"category": "defauts", "tables": ["groups", "assets", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels groupes ont des interventions planifiées ce mois ?",
+        "sql": """
+            SELECT g.name AS groupe, COUNT(i.id) AS nb_interventions
+            FROM {tenant_db}.groups g
+            INNER JOIN {tenant_db}.assets a ON g.id = a.group_id
+            INNER JOIN {tenant_db}.interventions i ON a.id = i.asset_id
+            WHERE MONTH(i.date_intervention) = MONTH(NOW())
+            AND YEAR(i.date_intervention) = YEAR(NOW())
+            AND i.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY nb_interventions DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["groups", "assets", "interventions"], "tenant_generic": True}
+    },
+    {
+        "question": "Quel est le score moyen des équipements par groupe ?",
+        "sql": """
+            SELECT g.name AS groupe,
+                   ROUND(AVG(a.assets_scores), 2) AS score_moyen,
+                   COUNT(a.id) AS nb_equipements
+            FROM {tenant_db}.groups g
+            INNER JOIN {tenant_db}.assets a ON g.id = a.group_id
+            WHERE a.assets_scores IS NOT NULL
+            AND a.deleted_at IS NULL
+            AND g.deleted_at IS NULL
+            GROUP BY g.id, g.name
+            ORDER BY score_moyen DESC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["groups", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels groupes ont des équipements sans mesure depuis 15 jours ?",
+        "sql": """
+            SELECT g.name AS groupe, a.id, a.name, a.ref, a.last_measure_created_at
+            FROM {tenant_db}.groups g
+            INNER JOIN {tenant_db}.assets a ON g.id = a.group_id
+            WHERE (a.last_measure_created_at IS NULL
+                   OR a.last_measure_created_at < DATE_SUB(NOW(), INTERVAL 15 DAY))
+            AND a.deleted_at IS NULL
+            AND g.deleted_at IS NULL
+            ORDER BY g.name, a.last_measure_created_at;
+        """,
+        "metadata": {"category": "mesures", "tables": ["groups", "assets"], "tenant_generic": True}
+    },
+    # ===============================================mesure==============================
+        {
+        "question": "Combien de points de mesure par équipement ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, COUNT(mp.id) AS nb_points
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.measurement_points mp ON a.id = mp.asset_id AND mp.deleted_at IS NULL
+            WHERE a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_points DESC;
+        """,
+        "metadata": {"category": "mesures", "tables": ["assets", "measurement_points"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels sont les points de mesure de l'équipement 'X' ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type, mp.status, mp.last_measure_created_at,
+                   a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE (a.name = 'X' OR a.ref = 'X')
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY mp.name;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont en état critique ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type, mp.status,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 5
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name, mp.name;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure n'ont pas de mesure depuis 7 jours ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.last_measure_created_at,
+                   a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE (mp.last_measure_created_at IS NULL
+                   OR mp.last_measure_created_at < DATE_SUB(NOW(), INTERVAL 7 DAY))
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY mp.last_measure_created_at;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien de signaux par mesure aujourd'hui ?",
+        "sql": """
+            SELECT m.id AS measure_id, a.name AS asset_name, a.ref AS asset_ref,
+                   COUNT(ms.id) AS nb_signaux, m.created_at
+            FROM {tenant_db}.measurements m
+            INNER JOIN {tenant_db}.assets a ON m.asset_id = a.id
+            LEFT JOIN {tenant_db}.measurement_signal ms ON m.id = ms.measure_id AND ms.deleted_at IS NULL
+            WHERE DATE(m.created_at) = CURDATE()
+            AND m.deleted_at IS NULL
+            GROUP BY m.id, a.name, a.ref, m.created_at
+            ORDER BY nb_signaux DESC;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurements", "assets", "measurement_signal"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont des tachymètres ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.is_tachy = 1
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont liés à l'huile ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.is_oil = 1
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont des signaux non traités ?",
+        "sql": """
+            SELECT DISTINCT a.id, a.name, a.ref, COUNT(ms.id) AS nb_signaux_non_traites
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id
+            INNER JOIN {tenant_db}.measurement_signal ms ON m.id = ms.measure_id
+            WHERE ms.treated = 0
+            AND ms.deleted_at IS NULL
+            AND m.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_signaux_non_traites DESC;
+        """,
+        "metadata": {"category": "mesures", "tables": ["assets", "measurements", "measurement_signal"], "tenant_generic": True}
+    },
+    {
+        "question": "Dernières 10 mesures en ligne par équipement ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, m.id AS measure_id,
+                   m.status, m.created_at
+            FROM {tenant_db}.measurements m
+            INNER JOIN {tenant_db}.assets a ON m.asset_id = a.id
+            WHERE m.is_online = 1
+            AND m.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY m.created_at DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurements", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quel équipement a le plus de mesures cette semaine ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, COUNT(m.id) AS nb_mesures
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id
+            WHERE m.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND m.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_mesures DESC
+            LIMIT 1;
+        """,
+        "metadata": {"category": "mesures", "tables": ["assets", "measurements"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure ont le plus de défauts associés ?",
+        "sql": """
+            SELECT mp.id, mp.name, a.name AS asset_name, a.ref AS asset_ref,
+                   COUNT(af.id) AS nb_defauts
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            INNER JOIN {tenant_db}.asset_faults af ON mp.id = af.point_id
+            WHERE mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY mp.id, mp.name, a.name, a.ref
+            ORDER BY nb_defauts DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont des mesures manuelles ?",
+        "sql": """
+            SELECT DISTINCT a.id, a.name, a.ref, COUNT(m.id) AS nb_mesures_manuelles
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id
+            WHERE m.is_manual = 1
+            AND m.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_mesures_manuelles DESC;
+        """,
+        "metadata": {"category": "mesures", "tables": ["assets", "measurements"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont en dehors (is_out) ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.measurement_points mp
+            INNER JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.is_out = 1
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien de mesures traitées vs non traitées cette semaine ?",
+        "sql": """
+            SELECT
+                SUM(CASE WHEN m.treated = 1 THEN 1 ELSE 0 END) AS traitees,
+                SUM(CASE WHEN m.treated = 0 OR m.treated IS NULL THEN 1 ELSE 0 END) AS non_traitees,
+                COUNT(*) AS total
+            FROM {tenant_db}.measurements m
+            WHERE m.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND m.deleted_at IS NULL;
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurements"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont des mesures génériques (is_generic) ?",
+        "sql": """
+            SELECT DISTINCT a.id, a.name, a.ref, COUNT(m.id) AS nb_mesures_generiques
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id
+            WHERE m.is_generic = 1
+            AND m.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_mesures_generiques DESC;
+        """,
+        "metadata": {"category": "mesures", "tables": ["assets", "measurements"], "tenant_generic": True}
+    },
+    # ===============================================PDM DETECTION & FEATURES==============================
+    {
+        "question": "Quels équipements ont un Health Index (asset_HI) inférieur à 0.5 aujourd'hui ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.asset_HI, pd.point_HI, pd.sub_asset_HI, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.asset_HI < 0.5
+            AND pd.asset_HI IS NOT NULL
+            AND DATE(pd.created_at) = CURDATE()
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.asset_HI ASC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un pourcentage de désalignement supérieur à 50% ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.percentage_Desalignement, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.percentage_Desalignement > 50
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.percentage_Desalignement DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un défaut d'engrenage (percentage_gear > 60%) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.percentage_gear, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.percentage_gear > 60
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.percentage_gear DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un taux de lubrification critique (percentage_lubrification > 80%) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.percentage_lubrification, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.percentage_lubrification > 80
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.percentage_lubrification DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un Kurtosis anormalement élevé (> 10) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.Kurtosis_g, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.Kurtosis_g > 10
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.Kurtosis_g DESC
+            LIMIT 20;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un NGV au-dessus du seuil d'alerte (warning) mais en dessous de l'alarme ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   fm.value AS ngv_value,
+                   fg.warning AS seuil_warning,
+                   fg.alarm AS seuil_alarm,
+                   fm.created_at
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN {tenant_db}.feature_group fg ON fm.feature_id = fg.feature_id AND fm.group_id = fg.group_id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE f.name = 'NGV'
+            AND fm.value > fg.warning
+            AND fm.value <= fg.alarm
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY fm.value DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "feature_group", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelle est l'évolution de la NGV de l'équipement 'X' sur les 7 derniers jours ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   DATE(fm.created_at) AS jour,
+                   AVG(fm.value) AS ngv_moyen,
+                   MAX(fm.value) AS ngv_max,
+                   MIN(fm.value) AS ngv_min
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE f.name = 'NGV'
+            AND (a.name = 'X' OR a.ref = 'X')
+            AND fm.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref, DATE(fm.created_at)
+            ORDER BY jour ASC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont le NGA le plus élevé aujourd'hui ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, fm.value AS nga_value, fm.created_at
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE f.name = 'NGA'
+            AND fm.created_at >= CURDATE()
+            AND fm.created_at < CURDATE() + INTERVAL 1 DAY
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY fm.value DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelle est la sévérité de déséquilibre (imbalance) la plus élevée du mois ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   MAX(pd.severity_imbalance) AS severite_max,
+                   AVG(pd.severity_imbalance) AS severite_moy
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND pd.severity_imbalance IS NOT NULL
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY severite_max DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un taux de roulement (Rolement_percentage) supérieur à 70% ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.Rolement_percentage, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.Rolement_percentage > 70
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.Rolement_percentage DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont eu une détection PDM aujourd'hui avec fault_1 actif ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, pd.fault_1, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.fault_1 = 1
+            AND DATE(pd.created_at) = CURDATE()
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelle est la valeur de VCC_g par équipement cette semaine ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   AVG(fm.value) AS vcc_g_moyen,
+                   MAX(fm.value) AS vcc_g_max
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE f.name = 'VCC_g'
+            AND fm.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY vcc_g_max DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un Factor K (K) élevé ce mois ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   AVG(fm.value) AS k_moyen, MAX(fm.value) AS k_max
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE f.name = 'K'
+            AND fm.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY k_max DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles features dépassent le seuil warning pour l'équipement 'X' ?",
+        "sql": """
+            SELECT f.name AS feature_name, f.unit,
+                   fm.value, fg.warning, fg.alarm,
+                   a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN {tenant_db}.feature_group fg ON fm.feature_id = fg.feature_id AND fm.group_id = fg.group_id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE (a.name = 'X' OR a.ref = 'X')
+            AND fm.value > fg.warning
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY (fm.value - fg.warning) DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "feature_group", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Quel est le classement des équipements par Health Index global ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   AVG(pd.asset_HI) AS hi_moyen,
+                   MIN(pd.asset_HI) AS hi_min
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.asset_HI IS NOT NULL
+            AND pd.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY hi_moyen ASC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un FC (Factor Crest) anormal ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, fm.value AS fc_value, fm.created_at
+            FROM {tenant_db}.feature_measurement fm
+            JOIN {tenant_db}.assets a ON fm.asset_parent_id = a.id
+            JOIN i_sense_v3_devenv_db.features f ON fm.feature_id = f.id
+            WHERE f.name = 'FC'
+            AND fm.value > 6
+            AND fm.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY fm.value DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "predictions", "tables": ["feature_measurement", "assets", "features"], "tenant_generic": True}
+    },
+    {
+        "question": "Évolution du Health Index de l'équipement 'X' sur 30 jours ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   DATE(pd.created_at) AS jour,
+                   AVG(pd.asset_HI) AS hi_moyen,
+                   AVG(pd.point_HI) AS point_hi_moyen
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE (a.name = 'X' OR a.ref = 'X')
+            AND pd.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref, DATE(pd.created_at)
+            ORDER BY jour ASC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont des turbulences détectées (percentage_Turbulance_threshold > 40%) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   pd.percentage_Turbulance_threshold, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.percentage_Turbulance_threshold > 40
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.percentage_Turbulance_threshold DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un RMS d'accélération (rms_acc) supérieur à 5 g ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, pd.rms_acc, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.rms_acc > 5
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.rms_acc DESC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un Crest Factor accélération (CrestFactor_g) supérieur à 4 ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, pd.CrestFactor_g, pd.created_at
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id
+            WHERE pd.CrestFactor_g > 4
+            AND pd.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY pd.CrestFactor_g DESC
+            LIMIT 20;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "pdm_detection"], "tenant_generic": True}
+    },
+    # ===============================================SOUS-ÉQUIPEMENTS & HIÉRARCHIE==============================
+    {
+        "question": "Quels équipements ont des sous-équipements ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, COUNT(child.id) AS nb_sous_equipements
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.assets child ON a.id = child.parent_id
+            WHERE a.deleted_at IS NULL
+            AND child.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_sous_equipements DESC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels sont les sous-équipements de 'X' ?",
+        "sql": """
+            SELECT child.id, child.name, child.ref, child.status,
+                   parent.name AS parent_name, parent.ref AS parent_ref
+            FROM {tenant_db}.assets child
+            INNER JOIN {tenant_db}.assets parent ON child.parent_id = parent.id
+            WHERE (parent.name = 'X' OR parent.ref = 'X')
+            AND child.deleted_at IS NULL
+            AND parent.deleted_at IS NULL
+            ORDER BY child.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels sous-équipements sont en état critique ?",
+        "sql": """
+            SELECT child.id, child.name, child.ref, child.status,
+                   parent.id AS parent_id, parent.name AS parent_name, parent.ref AS parent_ref
+            FROM {tenant_db}.assets child
+            INNER JOIN {tenant_db}.assets parent ON child.parent_id = parent.id
+            WHERE child.status = 5
+            AND child.deleted_at IS NULL
+            AND parent.deleted_at IS NULL
+            ORDER BY parent.name, child.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements parents ont tous leurs sous-équipements en état normal ?",
+        "sql": """
+            SELECT parent.id, parent.name, parent.ref, COUNT(child.id) AS nb_sous
+            FROM {tenant_db}.assets parent
+            INNER JOIN {tenant_db}.assets child ON parent.id = child.parent_id
+            WHERE child.status = 1
+            AND parent.deleted_at IS NULL
+            AND child.deleted_at IS NULL
+            GROUP BY parent.id, parent.name, parent.ref
+            HAVING nb_sous = (
+                SELECT COUNT(*) FROM {tenant_db}.assets sub
+                WHERE sub.parent_id = parent.id AND sub.deleted_at IS NULL
+            )
+            ORDER BY parent.name;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements de niveau racine (sans parent) sont en alarme ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status, COUNT(al.id) AS nb_alarmes
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.alarms al ON a.id = al.asset_id
+            WHERE a.parent_id IS NULL
+            AND al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref, a.status
+            ORDER BY nb_alarmes DESC;
+        """,
+        "metadata": {"category": "alarmes", "tables": ["assets", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien de niveaux de hiérarchie ont les équipements ?",
+        "sql": """
+            SELECT
+                SUM(CASE WHEN a.parent_id IS NULL THEN 1 ELSE 0 END) AS niveau_1_racine,
+                SUM(CASE WHEN a.parent_id IS NOT NULL AND p.parent_id IS NULL THEN 1 ELSE 0 END) AS niveau_2,
+                SUM(CASE WHEN p.parent_id IS NOT NULL THEN 1 ELSE 0 END) AS niveau_3_plus
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.assets p ON a.parent_id = p.id
+            WHERE a.deleted_at IS NULL;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels défauts affectent des sous-équipements (sub_asset_id) ?",
+        "sql": """
+            SELECT a.id AS parent_id, a.name AS parent_name, a.ref AS parent_ref,
+                   sub.id AS sub_id, sub.name AS sub_name, sub.ref AS sub_ref,
+                   f.name AS defaut, af.start_date
+            FROM {tenant_db}.asset_faults af
+            INNER JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            INNER JOIN {tenant_db}.assets sub ON af.sub_asset_id = sub.id
+            INNER JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.sub_asset_id IS NOT NULL
+            AND af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements parents ont le plus de sous-équipements en panne ?",
+        "sql": """
+            SELECT parent.id, parent.name, parent.ref, COUNT(af.id) AS nb_pannes_sous
+            FROM {tenant_db}.assets parent
+            INNER JOIN {tenant_db}.assets child ON parent.id = child.parent_id
+            INNER JOIN {tenant_db}.asset_faults af ON child.id = af.asset_id
+            WHERE af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            AND parent.deleted_at IS NULL
+            AND child.deleted_at IS NULL
+            GROUP BY parent.id, parent.name, parent.ref
+            ORDER BY nb_pannes_sous DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "defauts", "tables": ["assets", "asset_faults"], "tenant_generic": True}
+    },
+    # ===============================================RECOMMANDATIONS AVANCÉES==============================
+    {
+        "question": "Quelles recommandations sont en attente de validation ?",
+        "sql": """
+            SELECT r.id, r.severity, r.fault_date, r.diagnostic_details,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   r.created_at
+            FROM {tenant_db}.recommendations_v3 r
+            LEFT JOIN {tenant_db}.assets a ON r.asset_id = a.id
+            WHERE r.validated_by IS NULL
+            AND r.deleted_at IS NULL
+            ORDER BY r.severity ASC, r.fault_date DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles recommandations ont été validées ce mois ?",
+        "sql": """
+            SELECT r.id, r.severity, r.fault_date, r.actions_taken,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   u.first_name, u.last_name
+            FROM {tenant_db}.recommendations_v3 r
+            LEFT JOIN {tenant_db}.assets a ON r.asset_id = a.id
+            LEFT JOIN i_sense_v3_devenv_db.users u ON r.validated_by = u.id
+            WHERE r.validated_by IS NOT NULL
+            AND r.updated_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND r.deleted_at IS NULL
+            ORDER BY r.updated_at DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "assets", "users"], "tenant_generic": True, "cross_database": True}
+    },
+    {
+        "question": "Quels équipements ont le plus de recommandations critiques (severity = 1) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, COUNT(r.id) AS nb_recommandations_critiques
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.recommendations_v3 r ON a.id = r.asset_id
+            WHERE r.severity = 1
+            AND r.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_recommandations_critiques DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["assets", "recommendations_v3"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles recommandations n'ont pas d'actions prises (actions_taken vide) ?",
+        "sql": """
+            SELECT r.id, r.severity, r.fault_date, r.diagnostic_details,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.recommendations_v3 r
+            LEFT JOIN {tenant_db}.assets a ON r.asset_id = a.id
+            WHERE (r.actions_taken IS NULL OR r.actions_taken = '')
+            AND r.deleted_at IS NULL
+            ORDER BY r.severity ASC, r.fault_date DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels experts ont le plus de recommandations assignées ?",
+        "sql": """
+            SELECT u.id, u.first_name, u.last_name, COUNT(ra.id) AS nb_recommandations
+            FROM {tenant_db}.recommendation_assets ra
+            INNER JOIN i_sense_v3_devenv_db.users u ON ra.expert = u.id
+            WHERE ra.deleted_at IS NULL
+            AND u.deleted_at IS NULL
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY nb_recommandations DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendation_assets", "users"], "tenant_generic": True, "cross_database": True}
+    },
+    {
+        "question": "Quelles sont les recommandations par point de mesure pour l'équipement 'X' ?",
+        "sql": """
+            SELECT r.id, r.severity, r.fault_date,
+                   mp.name AS point_name,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref
+            FROM {tenant_db}.recommendations_v3 r
+            INNER JOIN {tenant_db}.assets a ON r.asset_id = a.id
+            LEFT JOIN {tenant_db}.measurement_points mp ON r.point_id = mp.id
+            WHERE (a.name = 'X' OR a.ref = 'X')
+            AND r.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY r.fault_date DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "assets", "measurement_points"], "tenant_generic": True}
+    },
+        {
+        "question": "Quelles recommandations ont des opérations associées ?",
+        "sql": """
+            SELECT r.id, r.severity,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   o.name AS operation, ro.id AS liaison_id
+            FROM {tenant_db}.recommendations_v3 r
+            INNER JOIN {tenant_db}.recommendation_operations ro ON r.id = ro.recommendation_id
+            INNER JOIN {tenant_db}.operations o ON ro.operation_id = o.id
+            LEFT JOIN {tenant_db}.assets a ON r.asset_id = a.id
+            WHERE r.deleted_at IS NULL
+            AND o.deleted_at IS NULL
+            ORDER BY r.fault_date DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "recommendation_operations", "operations", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont des recommandations ouvertes depuis plus de 30 jours ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   r.id AS reco_id, r.severity, r.fault_date,
+                   DATEDIFF(NOW(), r.created_at) AS jours_ouverts
+            FROM {tenant_db}.recommendations_v3 r
+            INNER JOIN {tenant_db}.assets a ON r.asset_id = a.id
+            WHERE r.validated_by IS NULL
+            AND r.created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND r.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY jours_ouverts DESC;
+        """,
+        "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "assets"], "tenant_generic": True}
+    },
+
+    # ═══════════════════════════════════════════════════════════════
+    # CATÉGORIE 6 : INTERVENTIONS AVANCÉES - 15 questions
+    # ═══════════════════════════════════════════════════════════════
+
+    {
+        "question": "Quelles interventions sont prévues cette semaine ?",
+        "sql": """
+            SELECT i.id, a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   i.description, i.date_intervention, i.status,
+                   o.name AS operation
+            FROM {tenant_db}.interventions i
+            INNER JOIN {tenant_db}.assets a ON i.asset_id = a.id
+            LEFT JOIN {tenant_db}.operations o ON i.operation_id = o.id
+            WHERE i.date_intervention BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
+            AND i.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY i.date_intervention ASC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["interventions", "assets", "operations"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont eu des interventions ce mois sans avoir de recommandation associée ?",
+        "sql": """
+            SELECT DISTINCT a.id, a.name, a.ref, COUNT(i.id) AS nb_interventions
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.interventions i ON a.id = i.asset_id
+            WHERE i.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND i.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            AND NOT EXISTS (
+                SELECT 1 FROM {tenant_db}.recommendations_v3 r
+                WHERE r.asset_id = a.id
+                AND r.deleted_at IS NULL
+            )
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_interventions DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assets", "interventions", "recommendations_v3"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels experts ont réalisé le plus d'interventions ce trimestre ?",
+        "sql": """
+            SELECT u.id, u.first_name, u.last_name, COUNT(i.id) AS nb_interventions
+            FROM {tenant_db}.interventions i
+            INNER JOIN i_sense_v3_devenv_db.users u ON i.expert_id = u.id
+            WHERE i.date_intervention >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+            AND i.deleted_at IS NULL
+            AND u.deleted_at IS NULL
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY nb_interventions DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["interventions", "users"], "tenant_generic": True, "cross_database": True}
+    },
+    {
+        "question": "Quelles sont les opérations les plus fréquentes dans les interventions ?",
+        "sql": """
+            SELECT o.id, o.name AS operation, COUNT(i.id) AS nb_interventions
+            FROM {tenant_db}.operations o
+            INNER JOIN {tenant_db}.interventions i ON o.id = i.operation_id
+            WHERE i.deleted_at IS NULL
+            AND o.deleted_at IS NULL
+            GROUP BY o.id, o.name
+            ORDER BY nb_interventions DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["operations", "interventions"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements n'ont jamais eu d'intervention ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status, a.created_at
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.interventions i ON a.id = i.asset_id AND i.deleted_at IS NULL
+            WHERE i.id IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assets", "interventions"], "tenant_generic": True}
+    },
+    {
+        "question": "Délai moyen entre un défaut et une intervention par équipement ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   ROUND(AVG(TIMESTAMPDIFF(HOUR, af.start_date, i.date_intervention)), 1) AS delai_moyen_heures
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+            INNER JOIN {tenant_db}.interventions i ON a.id = i.asset_id
+            WHERE af.deleted_at IS NULL
+            AND i.deleted_at IS NULL
+            AND i.date_intervention > af.start_date
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY delai_moyen_heures DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assets", "asset_faults", "interventions"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles interventions ont été validées par un expert différent de celui qui les a réalisées ?",
+        "sql": """
+            SELECT i.id, a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   ue.first_name AS expert, uve.first_name AS validateur,
+                   i.date_intervention
+            FROM {tenant_db}.interventions i
+            INNER JOIN {tenant_db}.assets a ON i.asset_id = a.id
+            INNER JOIN i_sense_v3_devenv_db.users ue ON i.expert_id = ue.id
+            INNER JOIN i_sense_v3_devenv_db.users uve ON i.validator_id = uve.id
+            WHERE i.expert_id != i.validator_id
+            AND i.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY i.date_intervention DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["interventions", "assets", "users"], "tenant_generic": True, "cross_database": True}
+    },
+
+    # ═══════════════════════════════════════════════════════════════
+    # CATÉGORIE 7 : CHECKLISTS & ACTIONS - 10 questions
+    # ═══════════════════════════════════════════════════════════════
+
+    {
+        "question": "Quelles checklists sont en retard (overdue) ?",
+        "sql": """
+            SELECT ac.id, c.name AS checklist, a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   ac.start_date, ac.status
+            FROM {tenant_db}.assignment_checklist ac
+            INNER JOIN {tenant_db}.checklists c ON ac.checklist_id = c.id
+            INNER JOIN {tenant_db}.assets a ON ac.asset_id = a.id
+            WHERE ac.status = 'Overdue'
+            AND ac.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY ac.start_date ASC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assignment_checklist", "checklists", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Taux de complétion des checklists par équipement ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   COUNT(ac.id) AS total_checklists,
+                   SUM(CASE WHEN ac.status = 'Done' THEN 1 ELSE 0 END) AS completees,
+                   ROUND(100.0 * SUM(CASE WHEN ac.status = 'Done' THEN 1 ELSE 0 END) / COUNT(ac.id), 1) AS taux_pct
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.assignment_checklist ac ON a.id = ac.asset_id
+            WHERE ac.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            HAVING total_checklists > 0
+            ORDER BY taux_pct ASC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assets", "assignment_checklist"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles checklists sont en brouillon (Draft) ?",
+        "sql": """
+            SELECT ac.id, c.name AS checklist,
+                   a.id AS asset_id, a.name AS asset_name, a.ref AS asset_ref,
+                   ac.start_date, ac.duration
+            FROM {tenant_db}.assignment_checklist ac
+            INNER JOIN {tenant_db}.checklists c ON ac.checklist_id = c.id
+            INNER JOIN {tenant_db}.assets a ON ac.asset_id = a.id
+            WHERE ac.status = 'Draft'
+            AND ac.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY ac.start_date DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assignment_checklist", "checklists", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien de checklists complétées cette semaine par utilisateur ?",
+        "sql": """
+            SELECT u.id, u.first_name, u.last_name, COUNT(ac.id) AS nb_checklists_completees
+            FROM {tenant_db}.assignment_checklist ac
+            INNER JOIN i_sense_v3_devenv_db.users u ON ac.user_id = u.id
+            WHERE ac.status = 'Done'
+            AND ac.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND ac.deleted_at IS NULL
+            AND u.deleted_at IS NULL
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY nb_checklists_completees DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assignment_checklist", "users"], "tenant_generic": True, "cross_database": True}
+    },
+    {
+        "question": "Quelles actions sont associées aux équipements en état critique ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, act.name AS action, af.start_date
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+            INNER JOIN {tenant_db}.actions_fault af_act ON af.id = af_act.fault_id
+            INNER JOIN {tenant_db}.actions act ON af_act.action_id = act.id
+            WHERE a.status = 5
+            AND af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assets", "asset_faults", "actions_fault", "actions"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelle est la durée moyenne des checklists par famille ?",
+        "sql": """
+            SELECT fam.name AS famille,
+                   ROUND(AVG(ac.duration), 0) AS duree_moy_minutes,
+                   COUNT(ac.id) AS nb_checklists
+            FROM {tenant_db}.families fam
+            INNER JOIN {tenant_db}.checklists c ON fam.id = c.family_id
+            INNER JOIN {tenant_db}.assignment_checklist ac ON c.id = ac.checklist_id
+            WHERE ac.status = 'Done'
+            AND ac.duration IS NOT NULL
+            AND ac.deleted_at IS NULL
+            AND fam.deleted_at IS NULL
+            GROUP BY fam.id, fam.name
+            ORDER BY duree_moy_minutes DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["families", "checklists", "assignment_checklist"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont toutes leurs checklists à faire (To do) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, COUNT(ac.id) AS nb_a_faire
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.assignment_checklist ac ON a.id = ac.asset_id
+            WHERE ac.status = 'To do'
+            AND ac.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_a_faire DESC;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["assets", "assignment_checklist"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles opérations sont verrouillées ?",
+        "sql": """
+            SELECT id, name, created_at
+            FROM {tenant_db}.operations
+            WHERE locked = 1
+            AND deleted_at IS NULL
+            ORDER BY name;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["operations"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels défauts n'ont aucune opération associée (fault_operation) ?",
+        "sql": """
+            SELECT f.id, f.name
+            FROM {tenant_db}.faults f
+            LEFT JOIN {tenant_db}.fault_operation fo ON f.id = fo.fault_id AND fo.deleted_at IS NULL
+            WHERE fo.id IS NULL
+            AND f.deleted_at IS NULL
+            ORDER BY f.name;
+        """,
+        "metadata": {"category": "defauts", "tables": ["faults", "fault_operation"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles opérations sont liées aux défauts de roulement ?",
+        "sql": """
+            SELECT DISTINCT o.id, o.name AS operation, f.name AS defaut
+            FROM {tenant_db}.faults f
+            INNER JOIN {tenant_db}.fault_operation fo ON f.id = fo.fault_id
+            INNER JOIN {tenant_db}.operations o ON fo.operation_id = o.id
+            WHERE (f.name LIKE '%bearing%' OR f.name LIKE '%roulement%')
+            AND fo.deleted_at IS NULL
+            AND f.deleted_at IS NULL
+            AND o.deleted_at IS NULL
+            ORDER BY f.name, o.name;
+        """,
+        "metadata": {"category": "maintenance", "tables": ["faults", "fault_operation", "operations"], "tenant_generic": True}
+    },
+    # ═══════════════════════════════════════════════════════════════
+    # CATÉGORIE 10 : ANALYSES CROISÉES & KPIs - 20 questions
+    # ═══════════════════════════════════════════════════════════════
+
+    {
+        "question": "Tableau de bord global de santé des équipements ?",
+        "sql": """
+            SELECT
+                COUNT(a.id) AS total,
+                SUM(CASE WHEN a.status = 5 THEN 1 ELSE 0 END) AS critiques,
+                SUM(CASE WHEN a.status = 3 THEN 1 ELSE 0 END) AS moderes,
+                SUM(CASE WHEN a.status = 2 THEN 1 ELSE 0 END) AS mid,
+                SUM(CASE WHEN a.status = 1 THEN 1 ELSE 0 END) AS normaux,
+                SUM(CASE WHEN a.status = 0 THEN 1 ELSE 0 END) AS arretes,
+                SUM(CASE WHEN a.status = -1 THEN 1 ELSE 0 END) AS non_assignes
+            FROM {tenant_db}.assets a
+            WHERE a.deleted_at IS NULL;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements cumulent alarme + panne + sans intervention récente ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status
+            FROM {tenant_db}.assets a
+            WHERE a.deleted_at IS NULL
+            AND EXISTS (
+                SELECT 1 FROM {tenant_db}.alarms al
+                WHERE al.asset_id = a.id AND al.ended_at IS NULL AND al.deleted_at IS NULL
+            )
+            AND EXISTS (
+                SELECT 1 FROM {tenant_db}.asset_faults af
+                WHERE af.asset_id = a.id AND af.end_date IS NULL AND af.deleted_at IS NULL
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM {tenant_db}.interventions i
+                WHERE i.asset_id = a.id
+                AND i.date_intervention >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                AND i.deleted_at IS NULL
+            )
+            ORDER BY a.status DESC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "alarms", "asset_faults", "interventions"], "tenant_generic": True}
+    },
+    {
+        "question": "Top 10 des équipements les plus défaillants sur 12 mois ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   COUNT(af.id) AS nb_defauts_12mois,
+                   COUNT(DISTINCT al.id) AS nb_alarmes_12mois,
+                   MAX(af.start_date) AS dernier_defaut
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+                AND af.start_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                AND af.deleted_at IS NULL
+            LEFT JOIN {tenant_db}.alarms al ON a.id = al.asset_id
+                AND al.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                AND al.deleted_at IS NULL
+            WHERE a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            HAVING nb_defauts_12mois > 0
+            ORDER BY nb_defauts_12mois DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "asset_faults", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont changé de statut plus de 3 fois ce mois ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, COUNT(al.id) AS nb_changements_statut
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.alarms al ON a.id = al.asset_id
+            WHERE al.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND al.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            HAVING nb_changements_statut > 3
+            ORDER BY nb_changements_statut DESC;
+        """,
+        "metadata": {"category": "alarmes", "tables": ["assets", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelle est la corrélation entre le nombre de défauts et le score d'équipement ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.assets_scores,
+                   COUNT(af.id) AS nb_defauts_actifs
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+                AND af.end_date IS NULL AND af.deleted_at IS NULL
+            WHERE a.assets_scores IS NOT NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref, a.assets_scores
+            ORDER BY a.assets_scores ASC;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Équipements sans aucune activité (ni mesure, ni alarme, ni défaut) depuis 30 jours ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status, a.last_measure_created_at
+            FROM {tenant_db}.assets a
+            WHERE a.deleted_at IS NULL
+            AND (a.last_measure_created_at IS NULL
+                 OR a.last_measure_created_at < DATE_SUB(NOW(), INTERVAL 30 DAY))
+            AND NOT EXISTS (
+                SELECT 1 FROM {tenant_db}.alarms al
+                WHERE al.asset_id = a.id
+                AND al.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                AND al.deleted_at IS NULL
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM {tenant_db}.asset_faults af
+                WHERE af.asset_id = a.id
+                AND af.start_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                AND af.deleted_at IS NULL
+            )
+            ORDER BY a.last_measure_created_at;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "alarms", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels types de défauts ont le plus long temps de résolution moyen ?",
+        "sql": """
+            SELECT f.id, f.name AS defaut,
+                   COUNT(af.id) AS nb_occurrences,
+                   ROUND(AVG(af.duration), 1) AS duree_moy_heures,
+                   MAX(af.duration) AS duree_max_heures
+            FROM {tenant_db}.faults f
+            INNER JOIN {tenant_db}.asset_faults af ON f.id = af.fault_id
+            WHERE af.end_date IS NOT NULL
+            AND af.duration IS NOT NULL
+            AND af.deleted_at IS NULL
+            AND f.deleted_at IS NULL
+            GROUP BY f.id, f.name
+            ORDER BY duree_moy_heures DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "defauts", "tables": ["faults", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Analyse hebdomadaire : nouvelles pannes vs pannes résolues ?",
+        "sql": """
+            SELECT DATE_FORMAT(af.start_date, '%Y-%W') AS semaine,
+                   COUNT(CASE WHEN af.start_date IS NOT NULL THEN 1 END) AS nouvelles_pannes,
+                   COUNT(CASE WHEN af.end_date IS NOT NULL THEN 1 END) AS pannes_resolues
+            FROM {tenant_db}.asset_faults af
+            WHERE af.start_date >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
+            AND af.deleted_at IS NULL
+            GROUP BY DATE_FORMAT(af.start_date, '%Y-%W')
+            ORDER BY semaine DESC;
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Classement des équipements par durée totale de pannes ce trimestre ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   SUM(af.duration) AS duree_totale_heures,
+                   COUNT(af.id) AS nb_pannes
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+            WHERE af.start_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+            AND af.duration IS NOT NULL
+            AND af.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY duree_totale_heures DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "defauts", "tables": ["assets", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un RUL inférieur à 30 jours ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.rul, a.status, a.family_id,
+                   fam.name AS famille
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.families fam ON a.family_id = fam.id
+            WHERE a.rul IS NOT NULL
+            AND a.rul < 30
+            AND a.deleted_at IS NULL
+            ORDER BY a.rul ASC;
+        """,
+        "metadata": {"category": "predictions", "tables": ["assets", "families"], "tenant_generic": True}
+    },
+    {
+        "question": "Évolution mensuelle du nombre d'équipements critiques sur 6 mois ?",
+        "sql": """
+            SELECT DATE_FORMAT(al.created_at, '%Y-%m') AS mois,
+                   COUNT(DISTINCT a.id) AS nb_equipements_critiques
+            FROM {tenant_db}.alarms al
+            INNER JOIN {tenant_db}.assets a ON al.asset_id = a.id
+            WHERE al.status = 5
+            AND al.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            AND al.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            GROUP BY DATE_FORMAT(al.created_at, '%Y-%m')
+            ORDER BY mois ASC;
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont le meilleur score (assets_scores) avec des défauts actifs ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.assets_scores,
+                   COUNT(af.id) AS nb_defauts_actifs
+            FROM {tenant_db}.assets a
+            INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id
+            WHERE af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            AND a.assets_scores IS NOT NULL
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref, a.assets_scores
+            ORDER BY a.assets_scores DESC
+            LIMIT 10;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "asset_faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Rapport mensuel : résumé complet du mois courant ?",
+        "sql": """
+            SELECT
+                (SELECT COUNT(*) FROM {tenant_db}.assets WHERE deleted_at IS NULL) AS total_equipements,
+                (SELECT COUNT(*) FROM {tenant_db}.assets WHERE status = 5 AND deleted_at IS NULL) AS critiques,
+                (SELECT COUNT(*) FROM {tenant_db}.alarms WHERE ended_at IS NULL AND deleted_at IS NULL) AS alarmes_actives,
+                (SELECT COUNT(*) FROM {tenant_db}.asset_faults WHERE end_date IS NULL AND deleted_at IS NULL) AS pannes_actives,
+                (SELECT COUNT(*) FROM {tenant_db}.asset_faults WHERE start_date >= DATE_FORMAT(NOW(), '%Y-%m-01') AND deleted_at IS NULL) AS nouvelles_pannes_mois,
+                (SELECT COUNT(*) FROM {tenant_db}.interventions WHERE date_intervention >= DATE_FORMAT(NOW(), '%Y-%m-01') AND deleted_at IS NULL) AS interventions_mois,
+                (SELECT COUNT(*) FROM {tenant_db}.recommendations_v3 WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01') AND deleted_at IS NULL) AS recos_mois;
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets", "alarms", "asset_faults", "interventions", "recommendations_v3"], "tenant_generic": True}
+    },
+
     
+    # =============================================================================
     # ═══════════════════════════════════════════════════════════════
     # CATÉGORIE 9 : ENTREPRISES/CLIENTS - 10 questions
     # ═══════════════════════════════════════════════════════════════
@@ -2714,8 +4217,738 @@ DATASET_400_QUESTIONS = [
         """,
         "metadata": {"category": "entreprises", "tables": ["companies", "abonnements", "users"], "tenant_generic": False, "cross_database": True}
     },
+
+    {
+        "question": "Quels sont les équipements non affectés (Unassigned) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref, a.status,
+                   CASE WHEN a.status = -1 THEN 'Unassigned' END AS statut_label
+            FROM {tenant_db}.assets a
+            WHERE a.status = -1
+            AND a.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien d'équipements sont à l'arrêt (shut down) en ce moment ?",
+        "sql": """
+            SELECT COUNT(*) AS nb_shut_down
+            FROM {tenant_db}.assets a
+            WHERE a.status = 0
+            AND a.deleted_at IS NULL
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Liste des équipements en état normal (status 1) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   'Normal' AS statut_label
+            FROM {tenant_db}.assets a
+            WHERE a.status = 1
+            AND a.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements sont en état MID (status 2) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   'MID' AS statut_label
+            FROM {tenant_db}.assets a
+            WHERE a.status = 2
+            AND a.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements sont en état Moderate (status 3) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   'Moderate' AS statut_label
+            FROM {tenant_db}.assets a
+            WHERE a.status = 3
+            AND a.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un statut indéfini (status 4 ou NULL) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   CASE
+                       WHEN a.status = 4   THEN 'Undefined (4)'
+                       WHEN a.status IS NULL THEN 'Undefined (NULL)'
+                   END AS statut_label
+            FROM {tenant_db}.assets a
+            WHERE (a.status = 4 OR a.status IS NULL)
+            AND a.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Répartition complète des équipements par statut avec libellé ?",
+        "sql": """
+            SELECT
+                CASE
+                    WHEN a.status = -1       THEN 'Unassigned'
+                    WHEN a.status = 0        THEN 'Shut down'
+                    WHEN a.status = 1        THEN 'Normal'
+                    WHEN a.status = 2        THEN 'MID'
+                    WHEN a.status = 3        THEN 'Moderate'
+                    WHEN a.status = 4        THEN 'Undefined'
+                    WHEN a.status = 5        THEN 'Critical'
+                    WHEN a.status IS NULL     THEN 'Undefined (NULL)'
+                    ELSE 'Inconnu'
+                END AS statut_label,
+                a.status,
+                COUNT(*) AS nb_equipements
+            FROM {tenant_db}.assets a
+            WHERE a.deleted_at IS NULL
+            GROUP BY a.status
+            ORDER BY a.status
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements sont dégradés (MID, Moderate ou Critical) ?",
+        "sql": """
+            SELECT a.id, a.name, a.ref,
+                   CASE
+                       WHEN a.status = 2 THEN 'MID'
+                       WHEN a.status = 3 THEN 'Moderate'
+                       WHEN a.status = 5 THEN 'Critical'
+                   END AS statut_label
+            FROM {tenant_db}.assets a
+            WHERE a.status IN (2, 3, 5)
+            AND a.deleted_at IS NULL
+            ORDER BY a.status DESC, a.name
+        """,
+        "metadata": {"category": "equipements", "tables": ["assets"], "tenant_generic": True}
+    },
+ 
+    # ─────────────────────────────────────────────────────────────────
+    # SECTION B : alarms — tous les statuts
+    # ─────────────────────────────────────────────────────────────────
+ 
+    {
+        "question": "Quelles sont les alarmes non affectées (Unassigned) en cours ?",
+        "sql": """
+            SELECT al.id, al.asset_id, a.name AS asset_name,
+                   al.created_at, al.status,
+                   'Unassigned' AS statut_label
+            FROM {tenant_db}.alarms al
+            JOIN {tenant_db}.assets a ON al.asset_id = a.id
+            WHERE al.status = -1
+            AND al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+            ORDER BY al.created_at DESC
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Alarmes sur équipements à l'arrêt (shut down) actives en ce moment ?",
+        "sql": """
+            SELECT al.id, a.id AS asset_id, a.name AS asset_name,
+                   al.created_at,
+                   'Shut down' AS statut_label
+            FROM {tenant_db}.alarms al
+            JOIN {tenant_db}.assets a ON al.asset_id = a.id
+            WHERE al.status = 0
+            AND al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+            ORDER BY al.created_at DESC
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien d'alarmes en état Normal (status 1) ont été ouvertes ce mois-ci ?",
+        "sql": """
+            SELECT COUNT(*) AS nb_alarmes_normal
+            FROM {tenant_db}.alarms al
+            WHERE al.status = 1
+            AND al.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND al.deleted_at IS NULL
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles sont les alarmes de niveau MID (status 2) non résolues ?",
+        "sql": """
+            SELECT al.id, a.name AS asset_name, a.ref,
+                   al.created_at,
+                   TIMESTAMPDIFF(HOUR, al.created_at, NOW()) AS heures_ouvertes,
+                   'MID' AS statut_label
+            FROM {tenant_db}.alarms al
+            JOIN {tenant_db}.assets a ON al.asset_id = a.id
+            WHERE al.status = 2
+            AND al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+            ORDER BY al.created_at ASC
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles sont les alarmes Moderate (status 3) des 7 derniers jours ?",
+        "sql": """
+            SELECT al.id, a.name AS asset_name, a.ref,
+                   al.created_at, al.ended_at,
+                   'Moderate' AS statut_label
+            FROM {tenant_db}.alarms al
+            JOIN {tenant_db}.assets a ON al.asset_id = a.id
+            WHERE al.status = 3
+            AND al.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND al.deleted_at IS NULL
+            ORDER BY al.created_at DESC
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Combien d'alarmes critiques (status 5) sont ouvertes en ce moment ?",
+        "sql": """
+            SELECT COUNT(*) AS nb_alarmes_critiques
+            FROM {tenant_db}.alarms al
+            WHERE al.status = 5
+            AND al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Répartition complète des alarmes par statut avec libellé ?",
+        "sql": """
+            SELECT
+                CASE
+                    WHEN al.status = -1       THEN 'Unassigned'
+                    WHEN al.status = 0        THEN 'Shut down'
+                    WHEN al.status = 1        THEN 'Normal'
+                    WHEN al.status = 2        THEN 'MID'
+                    WHEN al.status = 3        THEN 'Moderate'
+                    WHEN al.status = 4        THEN 'Undefined'
+                    WHEN al.status = 5        THEN 'Critical'
+                    WHEN al.status IS NULL     THEN 'Undefined (NULL)'
+                    ELSE 'Inconnu'
+                END AS statut_label,
+                al.status,
+                COUNT(*) AS nb_alarmes
+            FROM {tenant_db}.alarms al
+            WHERE al.deleted_at IS NULL
+            GROUP BY al.status
+            ORDER BY al.status
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Quelles alarmes sont dégradées (MID, Moderate ou Critical) et non clôturées ?",
+        "sql": """
+            SELECT al.id, a.name AS asset_name, a.ref,
+                   al.created_at,
+                   CASE
+                       WHEN al.status = 2 THEN 'MID'
+                       WHEN al.status = 3 THEN 'Moderate'
+                       WHEN al.status = 5 THEN 'Critical'
+                   END AS statut_label
+            FROM {tenant_db}.alarms al
+            JOIN {tenant_db}.assets a ON al.asset_id = a.id
+            WHERE al.status IN (2, 3, 5)
+            AND al.ended_at IS NULL
+            AND al.deleted_at IS NULL
+            ORDER BY al.status DESC, al.created_at ASC
+        """,
+        "metadata": {"category": "alarmes", "tables": ["alarms", "assets"], "tenant_generic": True}
+    },
+ 
+    # ─────────────────────────────────────────────────────────────────
+    # SECTION C : asset_faults — tous les statuts
+    # ─────────────────────────────────────────────────────────────────
+ 
+    {
+        "question": "Quels défauts sont non affectés (Unassigned, status -1) ?",
+        "sql": """
+            SELECT af.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date,
+                   'Unassigned' AS statut_label
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.status = -1
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date DESC
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels défauts concernent des équipements à l'arrêt (shut down, status 0) ?",
+        "sql": """
+            SELECT af.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date, af.end_date,
+                   'Shut down' AS statut_label
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.status = 0
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date DESC
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Défauts en état Normal (status 1) actifs en ce moment ?",
+        "sql": """
+            SELECT af.id, a.name AS asset_name, f.name AS defaut_type,
+                   af.start_date,
+                   TIMESTAMPDIFF(DAY, af.start_date, NOW()) AS jours_actifs,
+                   'Normal' AS statut_label
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.status = 1
+            AND af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date ASC
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels défauts de niveau MID (status 2) ont été détectés ce mois-ci ?",
+        "sql": """
+            SELECT af.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date,
+                   'MID' AS statut_label
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.status = 2
+            AND af.start_date >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date DESC
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels défauts sont en niveau Moderate (status 3) et non clôturés ?",
+        "sql": """
+            SELECT af.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date,
+                   TIMESTAMPDIFF(DAY, af.start_date, NOW()) AS jours_en_cours,
+                   'Moderate' AS statut_label
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.status = 3
+            AND af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date ASC
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels défauts critiques (status 5) sont actuellement actifs avec le type de défaut ?",
+        "sql": """
+            SELECT af.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date,
+                   TIMESTAMPDIFF(DAY, af.start_date, NOW()) AS jours_actifs,
+                   'Critical' AS statut_label
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets a ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE af.status = 5
+            AND af.end_date IS NULL
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date ASC
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults", "assets", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Répartition des défauts par statut avec libellé complet ?",
+        "sql": """
+            SELECT
+                CASE
+                    WHEN af.status = -1       THEN 'Unassigned'
+                    WHEN af.status = 0        THEN 'Shut down'
+                    WHEN af.status = 1        THEN 'Normal'
+                    WHEN af.status = 2        THEN 'MID'
+                    WHEN af.status = 3        THEN 'Moderate'
+                    WHEN af.status = 4        THEN 'Undefined'
+                    WHEN af.status = 5        THEN 'Critical'
+                    WHEN af.status IS NULL     THEN 'Undefined (NULL)'
+                    ELSE 'Inconnu'
+                END AS statut_label,
+                af.status,
+                COUNT(*) AS nb_defauts
+            FROM {tenant_db}.asset_faults af
+            WHERE af.deleted_at IS NULL
+            GROUP BY af.status
+            ORDER BY af.status
+        """,
+        "metadata": {"category": "defauts", "tables": ["asset_faults"], "tenant_generic": True}
+    },
+ 
+    # ─────────────────────────────────────────────────────────────────
+    # SECTION D : measurement_points — tous les statuts
+    # ─────────────────────────────────────────────────────────────────
+ 
+    {
+        "question": "Quels points de mesure sont non affectés (Unassigned, status -1) ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.name AS asset_name, a.ref AS asset_ref,
+                   'Unassigned' AS statut_label
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = -1
+            AND mp.deleted_at IS NULL
+            ORDER BY a.name, mp.name
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont à l'arrêt (shut down, status 0) ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.name AS asset_name, a.ref,
+                   'Shut down' AS statut_label
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 0
+            AND mp.deleted_at IS NULL
+            ORDER BY a.name, mp.name
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont en état Normal (status 1) ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.name AS asset_name,
+                   mp.last_measure_created_at,
+                   'Normal' AS statut_label
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 1
+            AND mp.deleted_at IS NULL
+            ORDER BY mp.last_measure_created_at DESC
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont en état MID (status 2) ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.name AS asset_name, a.ref,
+                   'MID' AS statut_label
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 2
+            AND mp.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont en état Moderate (status 3) ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.name AS asset_name, a.ref,
+                   mp.last_measure_created_at,
+                   'Moderate' AS statut_label
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 3
+            AND mp.deleted_at IS NULL
+            ORDER BY a.name
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels points de mesure sont en état critique (status 5) avec leur dernier relevé ?",
+        "sql": """
+            SELECT mp.id, mp.name, mp.type,
+                   a.id AS asset_id, a.name AS asset_name, a.ref,
+                   mp.last_measure_created_at,
+                   'Critical' AS statut_label
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 5
+            AND mp.deleted_at IS NULL
+            ORDER BY mp.last_measure_created_at DESC
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Répartition des points de mesure par statut avec libellé complet ?",
+        "sql": """
+            SELECT
+                CASE
+                    WHEN mp.status = -1       THEN 'Unassigned'
+                    WHEN mp.status = 0        THEN 'Shut down'
+                    WHEN mp.status = 1        THEN 'Normal'
+                    WHEN mp.status = 2        THEN 'MID'
+                    WHEN mp.status = 3        THEN 'Moderate'
+                    WHEN mp.status = 4        THEN 'Undefined'
+                    WHEN mp.status = 5        THEN 'Critical'
+                    WHEN mp.status IS NULL     THEN 'Undefined (NULL)'
+                    ELSE 'Inconnu'
+                END AS statut_label,
+                mp.status,
+                COUNT(*) AS nb_points
+            FROM {tenant_db}.measurement_points mp
+            WHERE mp.deleted_at IS NULL
+            GROUP BY mp.status
+            ORDER BY mp.status
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points"], "tenant_generic": True}
+    },
+ 
+    # ─────────────────────────────────────────────────────────────────
+    # SECTION E : JOINTURES CROISÉES — assets + alarms + asset_faults + measurement_points
+    # ─────────────────────────────────────────────────────────────────
+ 
+    {
+        "question": "Équipements critiques (status 5) ayant aussi une alarme critique active ?",
+        "sql": """
+            SELECT DISTINCT
+                a.id AS asset_id, a.name AS asset_name, a.ref,
+                'Critical' AS statut_asset,
+                COUNT(al.id) AS nb_alarmes_critiques
+            FROM {tenant_db}.assets a
+            JOIN {tenant_db}.alarms al ON al.asset_id = a.id
+            WHERE a.status  = 5
+            AND   al.status = 5
+            AND   al.ended_at IS NULL
+            AND   a.deleted_at IS NULL
+            AND   al.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_alarmes_critiques DESC
+        """,
+        "metadata": {"category": "alarmes", "tables": ["assets", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Équipements Moderate (status 3) ayant un défaut actif avec le type de défaut ?",
+        "sql": """
+            SELECT a.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date,
+                   'Moderate' AS statut_asset,
+                   CASE
+                       WHEN af.status = 3 THEN 'Moderate'
+                       WHEN af.status = 5 THEN 'Critical'
+                       ELSE 'Autre'
+                   END AS statut_defaut
+            FROM {tenant_db}.assets a
+            JOIN {tenant_db}.asset_faults af ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE a.status = 3
+            AND af.end_date IS NULL
+            AND a.deleted_at IS NULL
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date ASC
+        """,
+        "metadata": {"category": "defauts", "tables": ["assets", "asset_faults", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements ont un statut différent entre la table assets et leurs alarmes actives ?",
+        "sql": """
+            SELECT a.id, a.name AS asset_name,
+                   a.status AS statut_asset,
+                   CASE
+                       WHEN a.status = -1 THEN 'Unassigned'
+                       WHEN a.status = 0  THEN 'Shut down'
+                       WHEN a.status = 1  THEN 'Normal'
+                       WHEN a.status = 2  THEN 'MID'
+                       WHEN a.status = 3  THEN 'Moderate'
+                       WHEN a.status = 4  THEN 'Undefined'
+                       WHEN a.status = 5  THEN 'Critical'
+                   END AS label_asset,
+                   al.status AS statut_alarme,
+                   CASE
+                       WHEN al.status = -1 THEN 'Unassigned'
+                       WHEN al.status = 0  THEN 'Shut down'
+                       WHEN al.status = 1  THEN 'Normal'
+                       WHEN al.status = 2  THEN 'MID'
+                       WHEN al.status = 3  THEN 'Moderate'
+                       WHEN al.status = 4  THEN 'Undefined'
+                       WHEN al.status = 5  THEN 'Critical'
+                   END AS label_alarme
+            FROM {tenant_db}.assets a
+            JOIN {tenant_db}.alarms al ON al.asset_id = a.id
+            WHERE al.ended_at IS NULL
+            AND a.deleted_at IS NULL
+            AND al.deleted_at IS NULL
+            AND a.status != al.status
+            ORDER BY a.id
+        """,
+        "metadata": {"category": "alarmes", "tables": ["assets", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Points de mesure critiques (status 5) avec l'état de l'équipement associé ?",
+        "sql": """
+            SELECT mp.id AS point_id, mp.name AS point_name, mp.type,
+                   a.id AS asset_id, a.name AS asset_name, a.ref,
+                   'Critical' AS statut_point,
+                   CASE
+                       WHEN a.status = -1 THEN 'Unassigned'
+                       WHEN a.status = 0  THEN 'Shut down'
+                       WHEN a.status = 1  THEN 'Normal'
+                       WHEN a.status = 2  THEN 'MID'
+                       WHEN a.status = 3  THEN 'Moderate'
+                       WHEN a.status = 4  THEN 'Undefined'
+                       WHEN a.status = 5  THEN 'Critical'
+                       ELSE 'Inconnu'
+                   END AS statut_asset
+            FROM {tenant_db}.measurement_points mp
+            JOIN {tenant_db}.assets a ON mp.asset_id = a.id
+            WHERE mp.status = 5
+            AND mp.deleted_at IS NULL
+            AND a.deleted_at IS NULL
+            ORDER BY a.name, mp.name
+        """,
+        "metadata": {"category": "mesures", "tables": ["measurement_points", "assets"], "tenant_generic": True}
+    },
+    {
+        "question": "Vue consolidée : équipements critiques avec leurs alarmes, défauts et points de mesure actifs ?",
+        "sql": """
+            SELECT
+                a.id AS asset_id,
+                a.name AS asset_name,
+                a.ref,
+                'Critical' AS statut_asset,
+                COUNT(DISTINCT al.id)  AS nb_alarmes_actives,
+                COUNT(DISTINCT af.id)  AS nb_defauts_actifs,
+                COUNT(DISTINCT mp.id)  AS nb_points_critique
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.alarms al
+                ON al.asset_id = a.id
+                AND al.ended_at IS NULL
+                AND al.deleted_at IS NULL
+            LEFT JOIN {tenant_db}.asset_faults af
+                ON af.asset_id = a.id
+                AND af.end_date IS NULL
+                AND af.deleted_at IS NULL
+            LEFT JOIN {tenant_db}.measurement_points mp
+                ON mp.asset_id = a.id
+                AND mp.status = 5
+                AND mp.deleted_at IS NULL
+            WHERE a.status = 5
+            AND a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_alarmes_actives DESC, nb_defauts_actifs DESC
+        """,
+        "metadata": {
+            "category": "equipements",
+            "tables": ["assets", "alarms", "asset_faults", "measurement_points"],
+            "tenant_generic": True
+        }
+    },
+    {
+        "question": "Équipements à l'arrêt (shut down) ayant encore des défauts non clôturés ?",
+        "sql": """
+            SELECT a.id, a.name AS asset_name, a.ref,
+                   f.name AS defaut_type, af.start_date,
+                   TIMESTAMPDIFF(DAY, af.start_date, NOW()) AS jours_en_cours
+            FROM {tenant_db}.assets a
+            JOIN {tenant_db}.asset_faults af ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE a.status = 0
+            AND af.end_date IS NULL
+            AND a.deleted_at IS NULL
+            AND af.deleted_at IS NULL
+            ORDER BY af.start_date ASC
+        """,
+        "metadata": {"category": "defauts", "tables": ["assets", "asset_faults", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Pour chaque niveau de statut, combien d'équipements ont au moins une alarme active ?",
+        "sql": """
+            SELECT
+                CASE
+                    WHEN a.status = -1 THEN 'Unassigned'
+                    WHEN a.status = 0  THEN 'Shut down'
+                    WHEN a.status = 1  THEN 'Normal'
+                    WHEN a.status = 2  THEN 'MID'
+                    WHEN a.status = 3  THEN 'Moderate'
+                    WHEN a.status = 4  THEN 'Undefined'
+                    WHEN a.status = 5  THEN 'Critical'
+                    ELSE 'Inconnu'
+                END AS statut_label,
+                a.status,
+                COUNT(DISTINCT a.id) AS nb_assets_avec_alarme
+            FROM {tenant_db}.assets a
+            JOIN {tenant_db}.alarms al ON al.asset_id = a.id
+            WHERE al.ended_at IS NULL
+            AND a.deleted_at IS NULL
+            AND al.deleted_at IS NULL
+            GROUP BY a.status
+            ORDER BY a.status
+        """,
+        "metadata": {"category": "alarmes", "tables": ["assets", "alarms"], "tenant_generic": True}
+    },
+    {
+        "question": "Quels équipements MID ou Moderate (status 2 ou 3) risquent de devenir critiques (ont un défaut actif) ?",
+        "sql": """
+            SELECT a.id, a.name AS asset_name, a.ref,
+                   CASE
+                       WHEN a.status = 2 THEN 'MID'
+                       WHEN a.status = 3 THEN 'Moderate'
+                   END AS statut_asset,
+                   f.name AS defaut_type,
+                   af.start_date,
+                   TIMESTAMPDIFF(DAY, af.start_date, NOW()) AS jours_defaut
+            FROM {tenant_db}.assets a
+            JOIN {tenant_db}.asset_faults af ON af.asset_id = a.id
+            JOIN {tenant_db}.faults f ON af.fault_id = f.id
+            WHERE a.status IN (2, 3)
+            AND af.end_date IS NULL
+            AND a.deleted_at IS NULL
+            AND af.deleted_at IS NULL
+            ORDER BY a.status DESC, af.start_date ASC
+        """,
+        "metadata": {"category": "defauts", "tables": ["assets", "asset_faults", "faults"], "tenant_generic": True}
+    },
+    {
+        "question": "Tableau de bord statuts croisés : pour chaque équipement, statut asset / alarme / défaut / point de mesure ?",
+        "sql": """
+            SELECT
+                a.id AS asset_id,
+                a.name AS asset_name,
+                a.ref,
+                CASE
+                    WHEN a.status = -1 THEN 'Unassigned'
+                    WHEN a.status = 0  THEN 'Shut down'
+                    WHEN a.status = 1  THEN 'Normal'
+                    WHEN a.status = 2  THEN 'MID'
+                    WHEN a.status = 3  THEN 'Moderate'
+                    WHEN a.status = 4  THEN 'Undefined'
+                    WHEN a.status = 5  THEN 'Critical'
+                    ELSE 'Inconnu'
+                END AS statut_asset,
+                MAX(al.status) AS statut_max_alarme,
+                MAX(af.status) AS statut_max_defaut,
+                MAX(mp.status) AS statut_max_point_mesure
+            FROM {tenant_db}.assets a
+            LEFT JOIN {tenant_db}.alarms al
+                ON al.asset_id = a.id AND al.ended_at IS NULL AND al.deleted_at IS NULL
+            LEFT JOIN {tenant_db}.asset_faults af
+                ON af.asset_id = a.id AND af.end_date IS NULL AND af.deleted_at IS NULL
+            LEFT JOIN {tenant_db}.measurement_points mp
+                ON mp.asset_id = a.id AND mp.deleted_at IS NULL
+            WHERE a.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref, a.status
+            ORDER BY a.status DESC, a.name
+        """,
+        "metadata": {
+            "category": "equipements",
+            "tables": ["assets", "alarms", "asset_faults", "measurement_points"],
+            "tenant_generic": True
+        }
+    },
 ]
 
+    
 # ═══════════════════════════════════════════════════════════════
 # FONCTIONS UTILITAIRES
 # ═══════════════════════════════════════════════════════════════

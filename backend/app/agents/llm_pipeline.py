@@ -15,7 +15,19 @@ import os
 import re
 from typing import Dict, List, Optional
 
+import os
+import os
 
+
+from pathlib import Path
+from dotenv import load_dotenv
+
+for _candidate in [Path(__file__).parents[0], Path(__file__).parents[1],
+                   Path(__file__).parents[2], Path(__file__).parents[3]]:
+    _env = _candidate / ".env"
+    if _env.exists():
+        load_dotenv(_env)
+        break 
 # ─────────────────────────────────────────────────────────────────────────────
 # TENANT NAME FIXES (anciennement dans llm_agent_v8)
 # ─────────────────────────────────────────────────────────────────────────────

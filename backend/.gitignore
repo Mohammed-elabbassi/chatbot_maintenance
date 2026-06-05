@@ -21,3 +21,6 @@ vector_store/
 node_modules/
 data/
 scripts/
+deshch/
+test_groq.py
+testgroq.py

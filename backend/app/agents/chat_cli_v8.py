@@ -20,7 +20,7 @@ def blk(title, value):
 
 
 def main():
-    agent = PlannerAgentV8()
+    agent = PlannerAgentV8(use_templates=False)
     print("\n" + "="*70)
     print("CHAT CLI V8 — LangGraph + Groq LLaMA 3.1 8B + Milvus RAG Hybride")
     print("="*70)

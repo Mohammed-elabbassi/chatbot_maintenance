@@ -73,6 +73,8 @@ class GuardrailsV7:
         unknown = [t for t in tables if not registry.get_table_schema(t)]
         return {"valid": len(unknown) == 0, "unknown_tables": unknown}
 
+    
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SQL VALIDATOR

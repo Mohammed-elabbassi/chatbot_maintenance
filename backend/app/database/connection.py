@@ -14,8 +14,8 @@ class DatabaseConnection:
     
     def __init__(self):
         self.config = {
-            'host': os.getenv('DB_HOST', '52.143.131.9'),
-            'user': os.getenv('DB_USER', 'interns_read_user'),
+            'host': os.getenv('DB_HOST', '127.0.0.1'),
+            'user': os.getenv('DB_USER', 'root'),
             'password': os.getenv('DB_PASSWORD', ''),
             'port': int(os.getenv('DB_PORT', '3306'))
         }

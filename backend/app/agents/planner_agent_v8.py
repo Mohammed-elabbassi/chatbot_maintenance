@@ -948,7 +948,6 @@
 
 #         return result
 
-
 # =========================================================17====================================================
 # backend/app/agents/planner_agent_v8.py
 """
@@ -1026,7 +1025,7 @@ class PlannerAgentV8:
 
     def __init__(
         self,
-        use_templates: bool = True,
+        use_templates: bool = False,
         use_rag:       bool = True,
         milvus_uri:    str  = "http://localhost:19530",
     ):
@@ -1147,26 +1146,26 @@ class PlannerAgentV8:
     # Nœud 2a : SQL Agent
     # ──────────────────────────────────────────────────────────────
     def _node_sql_agent(self, state: AgentState) -> AgentState:
-        intent    = state["intent"]
-        tenant_db = state["tenant_db"]
+        # intent    = state["intent"]
+        # tenant_db = state["tenant_db"]
 
-        # ÉTAPE 1 : Templates déterministes
-        if self.templates:
-            tmpl = self.templates.match(intent, tenant_db)
-            if tmpl:
-                val = self.validator.validate(tmpl.sql)
-                if val["valid"]:
-                    exec_r = self.executor.execute(tmpl.sql, tenant_db)
-                    if exec_r["success"]:
-                        return {
-                            **state,
-                            "sql":       tmpl.sql,
-                            "rows":      exec_r["rows"],
-                            "columns":   exec_r["columns"],
-                            "row_count": exec_r["row_count"],
-                            "success":   True,
-                            "method":    f"template:{tmpl.template_name}",
-                        }
+        # # ÉTAPE 1 : Templates déterministes
+        # if self.templates:
+        #     tmpl = self.templates.match(intent, tenant_db)
+        #     if tmpl:
+        #         val = self.validator.validate(tmpl.sql)
+        #         if val["valid"]:
+        #             exec_r = self.executor.execute(tmpl.sql, tenant_db)
+        #             if exec_r["success"]:
+        #                 return {
+        #                     **state,
+        #                     "sql":       tmpl.sql,
+        #                     "rows":      exec_r["rows"],
+        #                     "columns":   exec_r["columns"],
+        #                     "row_count": exec_r["row_count"],
+        #                     "success":   True,
+        #                     "method":    f"template:{tmpl.template_name}",
+        #                 }
 
         # ÉTAPE 2 : LLM Groq + RAG Milvus
         return self._llm_pipeline(state)
