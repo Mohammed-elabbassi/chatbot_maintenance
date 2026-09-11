@@ -1,17 +1,3 @@
-# backend/app/agents/rag_agent_v8.py
-"""
-RAG Agent V8 — Pipeline Hybride Milvus (MilvusClient API 2.4+)
-Dense HNSW → BM25 Sparse → RRF Fusion → Cross-Encoder Reranking
-
-Collections :
-  - ocp_sql_examples   : question → SQL  (depuis dataset_400_questions)
-  - ocp_table_schemas  : schémas tables  (depuis schema_global / schema_tenants)
-  - ocp_join_patterns  : patterns JOIN   (depuis standards_v3.JOINS)
-
-Dépendances :
-    pip install "pymilvus>=2.4.0" sentence-transformers rank_bm25
-"""
-
 import hashlib
 import json
 from collections import OrderedDict

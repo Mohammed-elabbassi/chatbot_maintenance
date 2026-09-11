@@ -1,9 +1,4 @@
-# schema_global.py
-"""
-Schéma complet de la base i_sense_v3_devenv_db
-15 tables essentielles avec TOUTES les colonnes, relations et métadonnées
-Pour l'Agent NLP - Génération de requêtes SQL exactes
-"""
+
 
 # ═══════════════════════════════════════════════════════════════
 # CONFIGURATION DE LA BASE

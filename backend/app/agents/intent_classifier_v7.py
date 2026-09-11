@@ -1,4 +1,3 @@
-# backend/app/agents/intent_classifier_v7.py
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -307,6 +306,17 @@ class IntentClassifierV7:
             r"\b(bonjour|salut|hello|hey|coucou|merci|au revoir|bonne journée|bonsoir|comment (ça va|vas-?tu))\b",
             re.IGNORECASE
         )
+        # Questions "méta" sur le bot lui-même (identité, capacités) ou sur
+        # le contexte temporel (date/heure du jour) : pas du small talk au
+        # sens salutation, mais ne doivent jamais partir en génération SQL.
+        self.META_TALK_RGX = re.compile(
+            r"\b(vous êtes qui|qui êtes[\s-]vous|qui es[\s-]tu|t'es qui|"
+            r"c'est quoi ce (chatbot|bot|assistant)|que peux[\s-]tu faire|"
+            r"que pouvez[\s-]vous faire|qu'est[\s-]ce que tu (sais|peux) faire|"
+            r"quelle est la date|quel jour (sommes[\s-]nous|on est)|"
+            r"date d'aujourd'hui|quelle heure (est[\s-]il|il est)|on est quel jour)\b",
+            re.IGNORECASE
+        )
 
     def _compile_patterns(self):
         self._action_patterns = {
@@ -334,6 +344,10 @@ class IntentClassifierV7:
 
         if self.SMALL_TALK_RGX.search(normalized):
             return Intent('chat_smalltalk', 'chat', 'GREETING', 1.0,
+                          raw_question=question, normalized=normalized)
+
+        if self.META_TALK_RGX.search(normalized):
+            return Intent('chat_meta', 'chat', 'META', 1.0,
                           raw_question=question, normalized=normalized)
 
         action, action_score = self._detect_best(normalized, self._action_patterns)
@@ -392,7 +406,7 @@ class IntentClassifierV7:
         intent = self.classify(question)
         tables = []
         cat = intent.category
-        if cat == 'fault': tables = ['assets','asset_faults','faults']
+        if cat == 'fault': tables = ['assets','asset_faults','faults','causes', 'cause_fault']
         elif cat == 'alarm': tables = ['assets','alarms']
         elif cat == 'measurement': tables = ['assets','measurements','feature_measurement','feature_group']
         elif cat == 'asset': tables = ['assets']
@@ -402,6 +416,7 @@ class IntentClassifierV7:
         elif cat == 'company': tables = []
         elif cat == 'prediction': tables = ['predictions','assets']
         elif cat == 'feature': tables = ['feature_measurement','feature_group','features']
+        elif cat == 'recommendation': tables = ['recommendations_v3', 'recommendation_assets', 'recommendation_faults', 'causes', 'cause_fault']
         elif cat == 'device': tables = ['vibox_diagnosis','devices']
         return {
             'action': intent.action,
@@ -429,3 +444,6 @@ class IntentClassifierV7:
                 if re.search(r'\b' + re.escape(s) + r'\b', text):
                     return key
         return None
+
+
+        

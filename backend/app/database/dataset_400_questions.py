@@ -1,15 +1,3 @@
-# dataset_400_questions.py
-"""
-Dataset de 400 questions-réponses SQL pour le fine-tuning
-Chatbot Maintenance Prédictive - i-sense / i-predict
-Basé sur les schémas : schema_global.py + schema_tenants.py
-
-✅ VERSION GÉNÉRIQUE MULTI-TENANT :
-- Utilise {tenant_db} pour les tables communes (TOUS les 9 tenants)
-- Garde v3_tenant_Site_Safi pour les tables uniques à Safi
-- Garde i_sense_v3_devenv_db pour les tables globales
-"""
-
 DATASET_400_QUESTIONS = [
     # ═══════════════════════════════════════════════════════════════
     # CATÉGORIE 1 : ÉQUIPEMENTS (ASSETS) - 50 questions
@@ -3582,6 +3570,1183 @@ DATASET_400_QUESTIONS = [
         """,
         "metadata": {"category": "recommandations", "tables": ["recommendations_v3", "assets"], "tenant_generic": True}
     },
+    {
+   
+        "question": "Pour chaque panne active, quelles sont les recommandations et les opérations associées ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date                   AS fault_start,
+                r.severity,
+                r.fault_date,
+                r.diagnostic_details,
+                r.recommendation_details,
+                r.actions_taken,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE af.end_date    IS NULL
+              AND af.deleted_at  IS NULL
+              AND r.deleted_at   IS NULL
+              AND op.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    
+    {
+        "question": "Quelles recommandations et opérations sont liées à la panne de l'équipement X ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                r.id                            AS recommendation_id,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                r.actions_taken,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE (a.name = 'X' OR a.ref = 'X')
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY r.fault_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+        {
+        "question": "Combien d'opérations sont recommandées par type de défaut ?",
+        "sql": """
+            SELECT
+                f.name                          AS fault_name,
+                COUNT(DISTINCT op.id)           AS nb_operations_distinctes,
+                COUNT(ro.id)                    AS nb_liaisons_totales
+            FROM {tenant_db}.faults             f
+            JOIN {tenant_db}.asset_faults       af  ON af.fault_id  = f.id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            GROUP BY f.id, f.name
+            ORDER BY nb_operations_distinctes DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["faults", "asset_faults",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+
+    {
+        "question": "Quelles sont les pannes critiques (statut 5) avec leurs recommandations et opérations ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE a.status     = 5
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    
+    {
+        "question": "Quelles sont les pannes  normales (statut 1) avec leurs recommandations et opérations ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE a.status     = 1
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    {
+        "question": "Quelles sont les pannes moyen (statut 2) avec leurs recommandations et opérations ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE a.status     = 2
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    
+    {
+        "question": "Quelles sont les pannes modéré (statut 3) avec leurs recommandations et opérations ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE a.status     = 3
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    
+    {
+        "question": "Quelles sont les pannes Indéfini (statut 4) avec leurs recommandations et opérations ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE a.status     = 4
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    
+    {
+        "question": "Quelle est la liste complète des recommandations avec leurs opérations pour les pannes du dernier mois ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date                   AS fault_start,
+                r.id                            AS recommendation_id,
+                r.severity,
+                r.recommendation_details,
+                r.actions_taken,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE af.start_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+              AND af.deleted_at  IS NULL
+              AND r.deleted_at   IS NULL
+              AND op.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quelles recommandations n'ont aucune opération associée pour des pannes actives ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                r.id                            AS recommendation_id,
+                r.severity,
+                r.recommendation_details
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            LEFT JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            WHERE af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+              AND ro.id         IS NULL
+            ORDER BY r.fault_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quel équipement cumule le plus d'opérations recommandées sur ses pannes actives ?",
+        "sql": """
+            SELECT
+                a.id                            AS asset_id,
+                a.name                          AS asset_name,
+                a.ref,
+                COUNT(DISTINCT ro.operation_id) AS nb_operations
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            WHERE af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            GROUP BY a.id, a.name, a.ref
+            ORDER BY nb_operations DESC
+            LIMIT 1;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de roulement ?",
+        "sql": """
+            SELECT
+                op.id                           AS operation_id,
+                op.name                         AS operation_name,
+                COUNT(ro.id)                    AS nb_prescriptions
+            FROM {tenant_db}.faults             f
+            JOIN {tenant_db}.asset_faults       af  ON af.fault_id  = f.id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE (f.name ="Bearing Wear" OR f.name="roulement")
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            GROUP BY op.id, op.name
+            ORDER BY nb_prescriptions DESC
+            LIMIT 1;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["faults", "asset_faults",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de AC Electrical Fault ?",
+    "sql": 
+    """ SELECT op.id AS operation_id, op.name AS operation_name, "
+        COUNT(ro.id) AS nb_prescriptions 
+        FROM {tenant_db}.faults f 
+        JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+        JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+        JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+        JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+        JOIN {tenant_db}.operations op ON op.id = ro.operation_id
+        WHERE (f.name LIKE '%AC Electrical Fault%') 
+        AND af.deleted_at IS NULL 
+        AND r.deleted_at IS NULL 
+        AND op.deleted_at IS NULL 
+        GROUP BY op.id, op.name 
+        ORDER BY nb_prescriptions DESC
+        LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Belt Fault ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+     FROM {tenant_db}.faults f 
+     JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+     JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+     JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+     JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+     JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+     WHERE (f.name LIKE '%Belt Fault%') 
+          AND af.deleted_at IS NULL 
+          AND r.deleted_at IS NULL 
+          AND op.deleted_at IS NULL 
+     GROUP BY op.id, op.name 
+     ORDER BY nb_prescriptions DESC 
+     LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Aeraulic fault ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Aeraulic fault%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Cavitation Fault ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Cavitation Fault%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de DC Electrical Fault ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%DC Electrical Fault%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Gear fault ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Gear fault%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Imbalance ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Imbalance%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Mechanical looseness ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Mechanical looseness%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Misalignment ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Misalignment%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Structural Fault ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Structural Fault%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Friction ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Friction%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Turbulence d'huile ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Turbulence d''huile%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes roulement au niveau de Bague externe(Bearing Wear - Outer Race) ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Bearing Wear - Outer Race%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de roulement au niveau de Bague interne (Bearing Wear - Inner Race) ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Bearing Wear - Inner Race%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de roulement au niveau de l'élément roulant(Bearing Wear - Rolling Element) ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Bearing Wear - Rolling Element%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    {
+    "question": "Quelle opération est la plus souvent prescrite dans les recommandations liées aux pannes de Lubrification ?",
+    "sql": 
+    """
+      SELECT op.id AS operation_id, 
+             op.name AS operation_name, 
+             COUNT(ro.id) AS nb_prescriptions 
+      FROM {tenant_db}.faults f 
+      JOIN {tenant_db}.asset_faults af ON af.fault_id = f.id 
+      JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id 
+      JOIN {tenant_db}.recommendations_v3 r ON r.id = rf.recommendation_id 
+      JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id 
+      JOIN {tenant_db}.operations op ON op.id = ro.operation_id 
+      WHERE (f.name LIKE '%Lubrification%') 
+           AND af.deleted_at IS NULL 
+           AND r.deleted_at IS NULL 
+           AND op.deleted_at IS NULL 
+      GROUP BY op.id, op.name 
+      ORDER BY nb_prescriptions DESC 
+      LIMIT 1;""",
+    "metadata": {
+        "category": "recommandations",
+        "tables": ["faults", "asset_faults", "recommendation_faults", "recommendations_v3", "recommendation_operations", "operations"],
+        "tenant_generic": True
+    }
+    },
+    
+ 
+    {
+        "question": "Affiche les recommandations avec leurs opérations pour les pannes dont les actions correctives n'ont pas encore été prises (actions_taken vide) ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                r.id                            AS recommendation_id,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE (r.actions_taken IS NULL OR r.actions_taken = '')
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            ORDER BY r.fault_date DESC;
+        """,
+        "metadata": {
+            "category": "recommandations",
+            "tables": ["asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+
+    
+    # ═══════════════════════════════════════════════════════════════
+    # BLOC B : PANNES → CAUSES → OPÉRATIONS → RECOMMANDATIONS (10 questions)
+    # ═══════════════════════════════════════════════════════════════
+ 
+    {
+        "question": "Pour chaque panne active, quelles sont les causes identifiées, les recommandations et les opérations associées ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                af.start_date                   AS fault_start,
+                c.name                          AS cause_name,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                r.actions_taken,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.cause_fault        cf  ON cf.fault_id = af.fault_id
+            JOIN {tenant_db}.causes             c   ON c.id   = cf.cause_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["asset_faults", "faults", "assets",
+                       "cause_fault", "causes",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quelles causes sont associées aux pannes de l'équipement X, avec les recommandations et opérations correspondantes ?",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                c.name                          AS cause_name,
+                c.description                   AS cause_description,
+                r.severity,
+                r.recommendation_details,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.cause_fault        cf  ON cf.fault_id = af.fault_id
+            JOIN {tenant_db}.causes             c   ON c.id   = cf.cause_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE (a.name = 'X' OR a.ref = 'X')
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND r.deleted_at  IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["asset_faults", "faults", "assets",
+                       "cause_fault", "causes",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quelle cause de panne génère le plus d'opérations recommandées ?",
+        "sql": """
+            SELECT
+                c.id                            AS cause_id,
+                c.name                          AS cause_name,
+                COUNT(DISTINCT ro.operation_id) AS nb_operations_distinctes,
+                COUNT(ro.id)                    AS nb_prescriptions_totales
+            FROM {tenant_db}.cause_fault        cf
+            JOIN {tenant_db}.causes             c   ON c.id   = cf.cause_id
+            JOIN {tenant_db}.asset_faults       af  ON af.fault_id = cf.fault_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            WHERE cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND af.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+            GROUP BY c.id, c.name
+            ORDER BY nb_operations_distinctes DESC
+            LIMIT 1;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["cause_fault", "causes", "asset_faults",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quels équipements ont des pannes avec causes identifiées mais sans recommandation ni opération ?",
+        "sql": """
+            SELECT DISTINCT
+                a.id                            AS asset_id,
+                a.name                          AS asset_name,
+                a.ref,
+                f.name                          AS fault_name,
+                c.name                          AS cause_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.cause_fault        cf  ON cf.fault_id = af.fault_id
+            JOIN {tenant_db}.causes             c   ON c.id   = cf.cause_id
+            LEFT JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            WHERE af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND rf.id         IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["asset_faults", "faults", "assets",
+                       "cause_fault", "causes",
+                       "recommendation_faults"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Donne un rapport complet (cause + recommandation + opération) pour toutes les pannes de roulement actives",
+        "sql": """
+            SELECT
+                a.name                          AS asset_name,
+                a.ref,
+                f.name                          AS fault_name,
+                af.start_date,
+                c.name                          AS cause_name,
+                c.description                   AS cause_description,
+                r.severity,
+                r.diagnostic_details,
+                r.recommendation_details,
+                r.actions_taken,
+                op.name                         AS operation_name
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.cause_fault        cf  ON cf.fault_id = af.fault_id
+            JOIN {tenant_db}.causes             c   ON c.id   = cf.cause_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE (f.name LIKE '%Bearing%' OR f.name LIKE '%roulement%')
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            ORDER BY af.start_date DESC;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["asset_faults", "faults", "assets",
+                       "cause_fault", "causes",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Combien de causes distinctes, recommandations et opérations sont associées à chaque type de défaut ?",
+        "sql": """
+            SELECT
+                f.name                          AS fault_type,
+                COUNT(DISTINCT c.id)            AS nb_causes,
+                COUNT(DISTINCT r.id)            AS nb_recommandations,
+                COUNT(DISTINCT op.id)           AS nb_operations
+            FROM {tenant_db}.faults             f
+            JOIN {tenant_db}.asset_faults       af  ON af.fault_id  = f.id
+            JOIN {tenant_db}.cause_fault        cf  ON cf.fault_id  = af.fault_id
+            JOIN {tenant_db}.causes             c   ON c.id  = cf.cause_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id  = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id = ro.operation_id
+            WHERE af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            GROUP BY f.id, f.name
+            ORDER BY nb_causes DESC;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["faults", "asset_faults",
+                       "cause_fault", "causes",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Quelles opérations sont recommandées pour la cause 'Lubrification insuffisante' sur des pannes actives ?",
+        "sql": """
+            SELECT DISTINCT
+                a.name                          AS asset_name,
+                f.name                          AS fault_name,
+                c.name                          AS cause_name,
+                op.name                         AS operation_name,
+                r.recommendation_details
+            FROM {tenant_db}.causes             c
+            JOIN {tenant_db}.cause_fault        cf  ON cf.cause_id  = c.id
+            JOIN {tenant_db}.asset_faults       af  ON af.id  = cf.fault_id
+            JOIN {tenant_db}.faults             f   ON f.id   = af.fault_id
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE (c.name LIKE '%lubrification%' OR c.name LIKE '%lubri%')
+              AND af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            ORDER BY a.name;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["causes", "cause_fault", "asset_faults", "faults", "assets",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    
+ 
+    {
+        "question": "Quelle est la cause la plus fréquente des pannes actives, et quelle opération est la plus souvent recommandée pour cette cause ?",
+        "sql": """
+            WITH top_cause AS (
+                SELECT
+                    c.id    AS cause_id,
+                    c.name  AS cause_name,
+                    COUNT(cf.id) AS nb
+                FROM {tenant_db}.cause_fault cf
+                JOIN {tenant_db}.causes c ON c.id = cf.cause_id
+                JOIN {tenant_db}.asset_faults af ON af.fault_id = cf.fault_id
+                WHERE af.end_date IS NULL
+                  AND af.deleted_at IS NULL
+                  AND cf.deleted_at IS NULL
+                  AND c.deleted_at IS NULL
+                GROUP BY c.id, c.name
+                ORDER BY nb DESC
+                LIMIT 1
+            )
+            SELECT
+                tc.cause_name,
+                op.name                         AS operation_la_plus_recommandee,
+                COUNT(ro.id)                    AS nb_fois_recommandee
+            FROM top_cause tc
+            JOIN {tenant_db}.cause_fault        cf  ON cf.cause_id  = tc.cause_id
+            JOIN {tenant_db}.asset_faults       af  ON af.fault_id = cf.fault_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            GROUP BY tc.cause_name, op.id, op.name
+            ORDER BY nb_fois_recommandee DESC
+            LIMIT 1;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["cause_fault", "causes", "asset_faults",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+ 
+    {
+        "question": "Liste des équipements avec au moins deux causes différentes sur leurs pannes actives, et toutes leurs opérations recommandées",
+        "sql": """
+            SELECT
+                a.id                            AS asset_id,
+                a.name                          AS asset_name,
+                a.ref,
+                COUNT(DISTINCT c.id)            AS nb_causes_distinctes,
+                GROUP_CONCAT(DISTINCT c.name ORDER BY c.name SEPARATOR ' | ')   AS causes,
+                GROUP_CONCAT(DISTINCT op.name ORDER BY op.name SEPARATOR ' | ') AS operations_recommandees
+            FROM {tenant_db}.asset_faults af
+            JOIN {tenant_db}.assets             a   ON a.id   = af.asset_id
+            JOIN {tenant_db}.cause_fault        cf  ON cf.fault_id = af.fault_id
+            JOIN {tenant_db}.causes             c   ON c.id   = cf.cause_id
+            JOIN {tenant_db}.recommendation_faults rf ON rf.fault_id = af.fault_id
+            JOIN {tenant_db}.recommendations_v3 r   ON r.id   = rf.recommendation_id
+            JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id
+            JOIN {tenant_db}.operations         op  ON op.id  = ro.operation_id
+            WHERE af.end_date   IS NULL
+              AND af.deleted_at IS NULL
+              AND cf.deleted_at IS NULL
+              AND c.deleted_at  IS NULL
+              AND r.deleted_at  IS NULL
+              AND op.deleted_at IS NULL
+            GROUP BY a.id, a.name, a.ref
+            HAVING nb_causes_distinctes >= 2
+            ORDER BY nb_causes_distinctes DESC;
+        """,
+        "metadata": {
+            "category": "defauts",
+            "tables": ["asset_faults", "assets",
+                       "cause_fault", "causes",
+                       "recommendation_faults", "recommendations_v3",
+                       "recommendation_operations", "operations"],
+            "tenant_generic": True
+        }
+    },
+
+
+
 
     # ═══════════════════════════════════════════════════════════════
     # CATÉGORIE 6 : INTERVENTIONS AVANCÉES - 15 questions
@@ -4888,7 +6053,7 @@ DATASET_400_QUESTIONS = [
         "metadata": {"category": "alarmes", "tables": ["assets", "alarms"], "tenant_generic": True}
     },
     {
-        "question": "Quels équipements MID ou Moderate (status 2 ou 3) risquent de devenir critiques (ont un défaut actif) ?",
+        "question": "Quels équipements MID ou Moderate risquent de devenir critiques  ?",
         "sql": """
             SELECT a.id, a.name AS asset_name, a.ref,
                    CASE
@@ -4947,6 +6112,7 @@ DATASET_400_QUESTIONS = [
         }
     },
 ]
+
 
     
 # ═══════════════════════════════════════════════════════════════

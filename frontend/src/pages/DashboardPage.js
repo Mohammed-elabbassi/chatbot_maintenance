@@ -415,6 +415,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { sendQuestion, exportExcel } from '../services/api';
+import { format as formatSql } from 'sql-formatter';
 import ReactMarkdown from 'react-markdown';
 import './DashboardPage.css';
 const MyLogo = require('./logo.png');
@@ -502,20 +503,55 @@ function DataTable({ rows, columns }) {
   );
 }
 
+// function SqlBlock({ sql }) {
+//   const [copied, setCopied] = useState(false);
+//   const copy = () => {
+//     navigator.clipboard.writeText(sql);
+//     setCopied(true);
+//     setTimeout(() => setCopied(false), 1500);
+//   };
+//   return (
+//     <div className="sql-block">
+//       <div className="sql-header">
+//         <span>SQL</span>
+//         <button onClick={copy} className="copy-btn">{copied ? '✓ Copié' : '⎘ Copier'}</button>
+//       </div>
+//       <pre className="sql-code">{sql}</pre>
+//     </div>
+//   );
+// }
 function SqlBlock({ sql }) {
   const [copied, setCopied] = useState(false);
+
+  // Formatage uniquement pour l'affichage — la donnée brute reste inchangée
+  const displaySql = React.useMemo(() => {
+    if (!sql) return sql;
+    try {
+      return formatSql(sql, {
+        language: 'mysql',
+        keywordCase: 'upper',
+        indentStyle: 'standard',
+        tabWidth: 2,
+        linesBetweenQueries: 1,
+      });
+    } catch {
+      return sql; // fallback si parsing échoue, on affiche le SQL brut
+    }
+  }, [sql]);
+
   const copy = () => {
-    navigator.clipboard.writeText(sql);
+    navigator.clipboard.writeText(sql); // on copie toujours le SQL original en une ligne
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
   return (
     <div className="sql-block">
       <div className="sql-header">
         <span>SQL</span>
         <button onClick={copy} className="copy-btn">{copied ? '✓ Copié' : '⎘ Copier'}</button>
       </div>
-      <pre className="sql-code">{sql}</pre>
+      <pre className="sql-code">{displaySql}</pre>
     </div>
   );
 }

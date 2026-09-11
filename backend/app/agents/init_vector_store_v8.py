@@ -1,17 +1,3 @@
-# backend/app/agents/init_vector_store_v8.py
-"""
-Init Vector Store V8 — Indexation Milvus
-Indexe dans les 3 collections Milvus :
-  1. ocp_sql_examples   ← dataset_400_questions + dataset_enrichment
-  2. ocp_table_schemas  ← schema_global + schema_tenants
-  3. ocp_join_patterns  ← standards_v3.JOINS
-
-Usage :
-    python init_vector_store_v8.py
-    python init_vector_store_v8.py --reset      # supprime et recrée les collections
-    python init_vector_store_v8.py --check      # affiche les stats sans indexer
-"""
-
 import argparse
 import sys
 from pathlib import Path
@@ -123,14 +109,14 @@ def main(reset: bool = False, check: bool = False, milvus_uri: str = "http://loc
     if check:
         rag = RAGAgentV8(milvus_uri=milvus_uri)
         stats = rag.get_collection_stats()
-        print("\n📊 Stats collections :")
+        print("\n Stats collections :")
         for k, v in stats.items():
             print(f"  {k} : {v} documents")
         return
 
     # Reset optionnel
     if reset:
-        print("\n⚠️  --reset : suppression des collections...")
+        print("\n  --reset : suppression des collections...")
         client = MilvusClient(uri=milvus_uri)
         for name in ["ocp_sql_examples", "ocp_table_schemas", "ocp_join_patterns"]:
             if client.has_collection(name):
@@ -152,7 +138,7 @@ def main(reset: bool = False, check: bool = False, milvus_uri: str = "http://loc
 
     stats = rag.get_collection_stats()
     print("\n" + "=" * 65)
-    print("✅ INDEXATION TERMINÉE")
+    print(" INDEXATION TERMINÉE")
     print("=" * 65)
     for k, v in stats.items():
         print(f"  {k} : {v} documents")

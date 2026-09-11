@@ -1,14 +1,3 @@
-# standards_v3.py
-"""
-Standards SQL V3.1 pour TOUT le dataset
-Source de vérité unique pour le fine-tuning
-Chatbot Maintenance Prédictive - i-sense / i-predict
-
-V3.1 : SYSTEM_PROMPT compressé (~400 tokens au lieu de ~900)
-        + 45 exemples négatifs
-        Tout le reste est IDENTIQUE à V3
-"""
-
 import re
 from typing import List, Set, Dict, Optional, Tuple
 
@@ -145,30 +134,93 @@ FILTERS = {
 # JOINTURES STANDARD (IDENTIQUE)
 # ═══════════════════════════════════════════════════════════════
 
-JOINS = {
-    "asset_faults": "INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id",
-    "faults": "INNER JOIN {tenant_db}.faults f ON af.fault_id = f.id",
-    "alarms": "INNER JOIN {tenant_db}.alarms al ON a.id = al.asset_id",
-    "measurements": "INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id",
-    "interventions": "INNER JOIN {tenant_db}.interventions i ON a.id = i.asset_id",
-    "recommendations": "INNER JOIN {tenant_db}.recommendation_assets ra ON a.id = ra.asset_id",
-    "recommendations_v3": "INNER JOIN {tenant_db}.recommendations_v3 r ON ra.recommendation_id = r.id",
-    "families": "LEFT JOIN {tenant_db}.families fam ON a.family_id = fam.id",
-    "asset_classes": "LEFT JOIN {tenant_db}.asset_classes ac ON a.class_id = ac.id",
-    "devices_global": "LEFT JOIN i_sense_v3_devenv_db.devices d ON al.device_id = d.id",
-    "users_global": "INNER JOIN i_sense_v3_devenv_db.users u ON 1=1",
-    "companies_global": "INNER JOIN i_sense_v3_devenv_db.companies c ON 1=1",
-    "user_company": "INNER JOIN i_sense_v3_devenv_db.user_company uc ON u.id = uc.user_id",
-    "family_fault": "INNER JOIN {tenant_db}.family_fault ff ON f.id = ff.fault_id",
-    "operations": "INNER JOIN {tenant_db}.operations o ON 1=1",
-    "feature_measurement": "INNER JOIN {tenant_db}.feature_measurement fm ON fm.asset_parent_id = a.id",
-    "feature_group": "INNER JOIN {tenant_db}.feature_group fg ON fm.feature_id = fg.feature_id AND fm.group_id = fg.group_id",
-    "pdm_detection": "INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id",
-    "groups": "LEFT JOIN {tenant_db}.groups g ON a.group_id = g.id",
-    "point_position": "LEFT JOIN {tenant_db}.point_position pp ON a.id = pp.asset_id",
-    "fault_operation": "INNER JOIN {tenant_db}.fault_operation fo ON f.id = fo.fault_id",
-}
+# JOINS = {
+#     "asset_faults": "INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id",
+#     "faults": "INNER JOIN {tenant_db}.faults f ON af.fault_id = f.id",
+#     "alarms": "INNER JOIN {tenant_db}.alarms al ON a.id = al.asset_id",
+#     "measurements": "INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id",
+#     "interventions": "INNER JOIN {tenant_db}.interventions i ON a.id = i.asset_id",
+#     "recommendations": "INNER JOIN {tenant_db}.recommendation_assets ra ON a.id = ra.asset_id",
+#     "recommendations_v3": "INNER JOIN {tenant_db}.recommendations_v3 r ON ra.recommendation_id = r.id",
+#     "families": "LEFT JOIN {tenant_db}.families fam ON a.family_id = fam.id",
+#     "asset_classes": "LEFT JOIN {tenant_db}.asset_classes ac ON a.class_id = ac.id",
+#     "devices_global": "LEFT JOIN i_sense_v3_devenv_db.devices d ON al.device_id = d.id",
+#     "users_global": "INNER JOIN i_sense_v3_devenv_db.users u ON 1=1",
+#     "companies_global": "INNER JOIN i_sense_v3_devenv_db.companies c ON 1=1",
+#     "user_company": "INNER JOIN i_sense_v3_devenv_db.user_company uc ON u.id = uc.user_id",
+#     "family_fault": "INNER JOIN {tenant_db}.family_fault ff ON f.id = ff.fault_id",
+#     "operations": "INNER JOIN {tenant_db}.operations o ON 1=1",
+#     "feature_measurement": "INNER JOIN {tenant_db}.feature_measurement fm ON fm.asset_parent_id = a.id",
+#     "feature_group": "INNER JOIN {tenant_db}.feature_group fg ON fm.feature_id = fg.feature_id AND fm.group_id = fg.group_id",
+#     "pdm_detection": "INNER JOIN {tenant_db}.pdm_detection pd ON a.id = pd.parent_id",
+#     "groups": "LEFT JOIN {tenant_db}.groups g ON a.group_id = g.id",
+#     "point_position": "LEFT JOIN {tenant_db}.point_position pp ON a.id = pp.asset_id",
+#     "fault_operation": "INNER JOIN {tenant_db}.fault_operation fo ON f.id = fo.fault_id",
+# }
 
+JOINS = {
+    # ─── DÉFAUTS ──────────────────────────────────────────────────────────────
+    "asset_faults":               "INNER JOIN {tenant_db}.asset_faults af ON a.id = af.asset_id",
+    "faults":                     "INNER JOIN {tenant_db}.faults f ON af.fault_id = f.id",
+    "family_fault":               "INNER JOIN {tenant_db}.family_fault ff ON f.id = ff.fault_id",
+    "cause_fault":                "INNER JOIN {tenant_db}.cause_fault cf ON cf.fault_id = af.id",
+    "causes":                     "INNER JOIN {tenant_db}.causes ca ON ca.id = cf.cause_id",
+    "actions_fault":              "INNER JOIN {tenant_db}.actions_fault actf ON actf.fault_id = af.id",
+    "actions":                    "INNER JOIN {tenant_db}.actions act ON act.id = actf.action_id",
+    "fault_operation":            "INNER JOIN {tenant_db}.fault_operation fo ON fo.fault_id = f.id",
+    "measurements_faults":        "INNER JOIN {tenant_db}.measurements_faults mf ON mf.measure_id = m.id",
+
+    # ─── ALARMES ──────────────────────────────────────────────────────────────
+    "alarms":                     "INNER JOIN {tenant_db}.alarms al ON a.id = al.asset_id",
+
+    # ─── MESURES ──────────────────────────────────────────────────────────────
+    "measurements":               "INNER JOIN {tenant_db}.measurements m ON a.id = m.asset_id",
+    "measurement_points":         "INNER JOIN {tenant_db}.measurement_points mp ON a.id = mp.asset_id",
+    "measurement_signal":         "INNER JOIN {tenant_db}.measurement_signal ms ON ms.measure_id = m.id",
+    "feature_measurement":        "INNER JOIN {tenant_db}.feature_measurement fm ON fm.asset_parent_id = a.id",
+    "feature_group":              "INNER JOIN {tenant_db}.feature_group fg ON fg.feature_id = fm.feature_id AND fg.group_id = fm.group_id",
+    "pdm_detection":              "INNER JOIN {tenant_db}.pdm_detection pd ON pd.parent_id = a.id",
+
+    # ─── INTERVENTIONS / MAINTENANCE ──────────────────────────────────────────
+    "interventions":              "INNER JOIN {tenant_db}.interventions i ON i.asset_id = a.id",
+    "operations":                 "INNER JOIN {tenant_db}.operations o ON 1=1",
+    "checklists":                 "INNER JOIN {tenant_db}.checklists cl ON cl.family_id = a.family_id",
+    "assignment_checklist":       "INNER JOIN {tenant_db}.assignment_checklist acl ON acl.asset_id = a.id",
+    "activity_log":               "INNER JOIN {tenant_db}.activity_log alog ON alog.user_id = u.id",
+
+    # ─── RECOMMANDATIONS ──────────────────────────────────────────────────────
+    "recommendations":            "INNER JOIN {tenant_db}.recommendation_assets ra ON ra.asset_id = a.id",
+    "recommendations_v3":         "INNER JOIN {tenant_db}.recommendations_v3 r ON r.id = ra.recommendation_id",
+    "recommendation_faults":      "INNER JOIN {tenant_db}.recommendation_faults rf ON rf.recommendation_id = r.id",
+    "recommendation_operations":  "INNER JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id",
+
+    # ─── FAMILLES / CLASSES / GROUPES ─────────────────────────────────────────
+    "families":                   "LEFT JOIN {tenant_db}.families fam ON fam.id = a.family_id",
+    "asset_classes":              "LEFT JOIN {tenant_db}.asset_classes ac ON ac.id = a.class_id",
+    "groups":                     "LEFT JOIN {tenant_db}.groups g ON g.id = a.group_id",
+    "diagrams":                   "LEFT JOIN {tenant_db}.diagrams diag ON diag.id = a.diagram_id",
+    "family_fault_operations":    "INNER JOIN {tenant_db}.family_fault_operations ffo ON ffo.family_id = fam.id",
+    "point_position":             "LEFT JOIN {tenant_db}.point_position pp ON pp.asset_id = a.id",
+
+    # ─── PRÉDICTIONS / VIBOX ──────────────────────────────────────────────────
+    "vibox_diagnosis":            "INNER JOIN {tenant_db}.vibox_diagnosis vd ON vd.device_id = d.id",
+    "vibox_diagnosis_item":       "INNER JOIN {tenant_db}.vibox_diagnosis_item vdi ON vdi.id = vd.diagnosis_id",
+    "vibox_diagnosis_recommended_action": "INNER JOIN {tenant_db}.vibox_diagnosis_recommended_action vdra ON vdra.id = vd.recommended_action_id",
+
+    # ─── GLOBAL : USERS / COMPANIES ───────────────────────────────────────────
+    "users_global":               "INNER JOIN i_sense_v3_devenv_db.users u ON 1=1",
+    "companies_global":           "INNER JOIN i_sense_v3_devenv_db.companies c ON 1=1",
+    "user_company":               "INNER JOIN i_sense_v3_devenv_db.user_company uc ON uc.user_id = u.id",
+    "entity_user":                "INNER JOIN {tenant_db}.entity_user eu ON eu.user_id = u.id",
+    "notifications_global":       "LEFT JOIN i_sense_v3_devenv_db.notifications n ON n.notifiable_id = u.id",
+    "abonnements_global":         "LEFT JOIN i_sense_v3_devenv_db.abonnements ab ON ab.company_id = uc.company_id",
+
+    # ─── GLOBAL : DEVICES / FEATURES ──────────────────────────────────────────
+    "devices_global":             "LEFT JOIN i_sense_v3_devenv_db.devices d ON d.id = al.device_id",
+    "features_global":            "LEFT JOIN i_sense_v3_devenv_db.features feat ON feat.id = fm.feature_id",
+    "features_device_global":     "LEFT JOIN i_sense_v3_devenv_db.features_device fd ON fd.feature_id = feat.id",
+    "predictions_global":         "LEFT JOIN i_sense_v3_devenv_db.predictions pred ON pred.asset_id = a.id",
+}
 # ═══════════════════════════════════════════════════════════════
 # ★★★ SYSTEM PROMPT V3.1 - COMPRESSÉ ★★★
 # ★★★ SEULE CHOSE QUI CHANGE PAR RAPPORT À V3 ★★★

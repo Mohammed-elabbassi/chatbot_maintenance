@@ -112,7 +112,7 @@ export default function LoginPage() {
         </form>
 
         {/* Demo hint */}
-        <p className="login-hint">Code par défaut : <code>admin</code></p>
+        <p className="login-hint"><code> S'inscrire</code></p>
       </div>
     </div>
   );

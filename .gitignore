@@ -6,26 +6,8 @@ models/*.pkl
 vector_store/
 
 node_modules/
-requirements_v8/
-__pycache__/
-
-__init__
-utils/
-.venv/
-__pycache__/
-*.pyc
-.env
-models/*.pkl
-vector_store/
-
-node_modules/
 data/
 scripts/
-deshch/
-test_groq.py
-testgroq.py
-backend/quality_report*
-backend/questions_report*
 knowledge/
 architecture.md
 benchmark_result_20260619_005136.txt

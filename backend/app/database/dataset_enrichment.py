@@ -1,12 +1,3 @@
-# dataset_enrichment.py
-"""
-Enrichissement du dataset : questions négatives, edge cases, ambiguës, etc.
-Chatbot Maintenance Prédictive - i-sense / i-predict
-
-V3.1 : 45 exemples négatifs (au lieu de 8)
-        Ambiguës et Edge Cases IDENTIQUES à V3
-"""
-
 # ═══════════════════════════════════════════════════════════════════════════
 # 1. EXEMPLES NÉGATIFS (refus d'exécution) - 45 exemples
 # ═══════════════════════════════════════════════════════════════════════════

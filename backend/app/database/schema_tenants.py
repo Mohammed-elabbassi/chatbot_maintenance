@@ -59,6 +59,7 @@ COMMON_TABLES = [
     "user_notif_config", "automated_emails", "entity_user",
     "tarifs", "tarif_measures", "operations", "family_fault_operations",
     "diagrams", "asset_classes","point_position","feature_measurement","groups", "feature_group","fault_operation",
+    "causes","cause_fault",
 ]
 
 UNIQUE_TABLES_SAFI = [
@@ -1775,6 +1776,51 @@ TABLE_FAULT_OPERATION = {
         {"table": "operations", "type": "many-to-one", "on": "fault_operation.operation_id = operations.id"},
         {"table": "faults", "type": "many-to-one", "on": "fault_operation.fault_id = faults.id"},
     ],
+    
+}
+
+TABLE_CAUSES = {
+    "name": "causes",
+    "databases": ALL_TENANT_DATABASES,
+    "table_type": "common",
+    "description": "Causes des défauts",
+    "category": "defauts",
+    "used_in_objectifs": list(range(16, 31)),
+    "total_columns": 7,
+    "columns": {
+        "id":          {"type": "INT",       "primary_key": True, "auto_increment": True, "nullable": False, "description": "ID unique"},
+        "name":        {"type": "VARCHAR",   "nullable": True,  "description": "Nom de la cause"},
+        "description": {"type": "VARCHAR",   "nullable": True,  "description": "Description"},
+        "locked":      {"type": "TINYINT",   "nullable": True,  "description": "Verrouillé (0/1)"},
+        "created_at":  {"type": "TIMESTAMP", "nullable": True,  "description": "Date création"},
+        "updated_at":  {"type": "TIMESTAMP", "nullable": True,  "description": "Date mise à jour"},
+        "deleted_at":  {"type": "TIMESTAMP", "nullable": True,  "description": "Suppression (soft delete)"},
+    },
+    "relationships": [
+        {"table": "cause_fault", "type": "one-to-many", "on": "causes.id = cause_fault.cause_id"},
+    ],
+}
+
+TABLE_CAUSE_FAULT = {
+    "name": "cause_fault",
+    "databases": ALL_TENANT_DATABASES,
+    "table_type": "common",
+    "description": "Liaison causes-défauts (asset_faults)",
+    "category": "defauts",
+    "used_in_objectifs": list(range(16, 31)),
+    "total_columns": 6,
+    "columns": {
+        "id":         {"type": "INT",       "primary_key": True, "auto_increment": True, "nullable": False, "description": "ID unique"},
+        "deleted_at": {"type": "TIMESTAMP", "nullable": True,  "description": "Suppression (soft delete)"},
+        "cause_id":   {"type": "INT",       "nullable": True,  "foreign_key": "causes.id",      "description": "Cause associée"},
+        "fault_id":   {"type": "INT",       "nullable": True,  "foreign_key": "asset_faults.id","description": "Défaut (asset_fault) concerné"},
+        "created_at": {"type": "TIMESTAMP", "nullable": True,  "description": "Date création"},
+        "updated_at": {"type": "TIMESTAMP", "nullable": True,  "description": "Date mise à jour"},
+    },
+    "relationships": [
+        {"table": "causes",      "type": "many-to-one", "on": "cause_fault.cause_id = causes.id"},
+        {"table": "asset_faults","type": "many-to-one", "on": "cause_fault.fault_id = asset_faults.id"},
+    ],
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -1827,6 +1873,8 @@ ALL_TABLES = {
     "groups": TABLE_GROUPS,
     "feature_group": TABLE_FEATURE_GROUP,
     "fault_operation": TABLE_FAULT_OPERATION,
+    "causes":      TABLE_CAUSES,
+    "cause_fault": TABLE_CAUSE_FAULT,
 
 }
 

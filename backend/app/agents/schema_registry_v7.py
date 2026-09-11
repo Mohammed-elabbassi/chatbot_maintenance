@@ -52,7 +52,7 @@ class SchemaRegistryV7:
         if category == "asset":
             tables.update(["assets", "asset_classes", "families"])
         elif category == "fault":
-            tables.update(["assets", "asset_faults", "faults"])
+             tables.update(["assets", "asset_faults", "faults", "causes", "cause_fault"])
         elif category == "alarm":
             tables.update(["assets", "alarms"])
         elif category == "measurement":
@@ -65,6 +65,11 @@ class SchemaRegistryV7:
             tables.update(["users", "user_company", "companies"])
         elif category == "company":
             tables.update(["companies", "abonnements", "devices", "user_company"])
+        elif category == "recommendation":
+            tables.update([
+                "assets", "recommendations_v3", "recommendation_assets",
+                "recommendation_faults", "causes", "cause_fault"   # ← ajouter
+            ])    
         else:
             tables.update(["assets"])
 

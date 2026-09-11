@@ -1,6 +1,3 @@
-# backend/app/agents/chat_cli_v8.py
-"""Chat CLI V8 — Test interactif du PlannerAgentV8."""
-
 import sys
 from pathlib import Path
 
@@ -30,7 +27,7 @@ def main():
     show_sql = show_meta = True
 
     while True:
-        q = input("\n🧑 Question > ").strip()
+        q = input("\n Question > ").strip()
         if not q:
             continue
         if q.lower() in {"exit", "quit"}:
@@ -47,7 +44,7 @@ def main():
         r = agent.process_question(q)
         blk("RÉPONSE", r.get("natural_response"))
         print(
-            f"\n✅ success={r.get('success')} | method={r.get('method')} | "
+            f"\n success={r.get('success')} | method={r.get('method')} | "
             f"tenant={r.get('tenant')} | category={r.get('category')} | "
             f"time={r.get('processing_time')}s | rows={r.get('row_count', 0)}"
         )

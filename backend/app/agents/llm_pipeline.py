@@ -1,13 +1,3 @@
-# backend/app/agents/llm_pipeline.py
-"""
-Fusion de :
-  - prompt_builder_v7.py  → PromptBuilderV7
-  - llm_agent_v8.py       → LLMAgentV8
-  - sql_repair_v8.py      → SQLRepairV8
-
-Importer ce seul module à la place des trois anciens.
-"""
-
 from __future__ import annotations
 
 import json
@@ -310,6 +300,62 @@ class PromptBuilderV7:
             "- Le champ \"sql\" doit tenir sur UNE SEULE LIGNE, sans retour à la ligne.\n"
             '- Format obligatoire :\n{"decision":"sql|refuse|clarify","reasoning":"résumé bref",'
             '"tables":["table1"],"sql":"SELECT ...;"}'
+            "\nRÈGLE CRITIQUE — PROTECTION DES DONNÉES UTILISATEURS :\n"
+            "Pour les questions sur les utilisateurs (table users), tu peux UNIQUEMENT retourner :\n"
+            "    Autorisé : first_name, last_name, email\n"
+            "    Interdit : phone, mobile, company_id, parent_id, password, remember_token,\n"
+            "               et toute colonne non listée ci-dessus.\n"
+            "    Interdit : toute jointure avec user_company ou companies pour révéler l'entreprise.\n"
+            "EXEMPLES :\n"
+            "  Question 'donne email de Yassine' → SELECT first_name, last_name, email FROM users WHERE first_name LIKE '%Yassine%'\n"
+            "  Question 'numéro de téléphone de Yassine' → decision='refuse', reasoning='Données personnelles non accessibles'\n"
+            "  Question 'dans quelle companie travaille Yassine' → decision='refuse', reasoning='Données personnelles non accessibles'\n"
+
+            "RÈGLE CRITIQUE — RECOMMANDATIONS :\n"
+            "Pour récupérer recommandations + opérations liées à une panne, utiliser OBLIGATOIREMENT :\n"
+            "  recommendations_v3 r\n"
+            "  JOIN recommendation_faults rf ON rf.recommendation_id = r.id\n"
+            "  JOIN recommendation_operations ro ON ro.recommendation_id = r.id\n"
+            "  JOIN asset_faults af ON af.id = rf.fault_id  (si filtre sur panne)\n"
+            "  JOIN operations op ON op.id = ro.operation_id\n"
+            "  JOIN assets a ON a.id = r.asset_id\n"
+            "recommendation_assets est une table SÉPARÉE sans colonne recommendation_id.\n"
+            "Ne PAS joindre recommendation_assets et recommendations_v3 ensemble.\n\n"
+            "RÈGLE CRITIQUE — FEATURES :\n"
+            "La table features appartient à i_sense_v3_devenv_db, PAS au tenant.\n"
+            "Toujours écrire : i_sense_v3_devenv_db.features (jamais v3_tenant_*.features)\n\n"
+
+            "RÈGLE CRITIQUE — RECOMMANDATIONS :\n"
+            "L'alias 'r' désigne TOUJOURS et UNIQUEMENT recommendations_v3.\n"
+            "Si tu utilises r.id, r.severity, r.diagnostic_details ou tout autre champ de r,\n"
+            "tu DOIS obligatoirement inclure : INNER JOIN {tenant_db}.recommendations_v3 r ON ...\n\n"
+
+            "ARCHITECTURE DES RECOMMANDATIONS (2 tables séparées, ne pas confondre) :\n"
+            "  • recommendations_v3 (alias r) : recommandations expertes structurées\n"
+            "      colonnes : id, severity, fault_date, asset_id, diagnostic_details,\n"
+            "                 recommendation_details, created_by, validated_by, deleted_at\n"
+            "  • recommendation_assets (alias ra) : recommandations par équipement\n"
+            "      colonnes : id, asset_id, fault, cause, notes, started_at, ended_at,\n"
+            "                 expert, status, deleted_at\n"
+            "      ⚠ PAS de colonne recommendation_id dans recommendation_assets !\n\n"
+
+            "CHEMINS DE JOINTURE OBLIGATOIRES :\n"
+            "  Cas 1 — recommandations via recommendations_v3 :\n"
+            "    FROM {tenant_db}.recommendations_v3 r\n"
+            "    INNER JOIN {tenant_db}.recommendation_faults rf ON rf.recommendation_id = r.id\n"
+            "    INNER JOIN {tenant_db}.faults f ON f.id = rf.fault_id\n"
+            "    INNER JOIN {tenant_db}.assets a ON a.id = r.asset_id\n\n"
+            "  Cas 2 — recommandations + opérations :\n"
+            "    FROM {tenant_db}.recommendations_v3 r\n"
+            "    INNER JOIN {tenant_db}.recommendation_operations ro ON ro.recommendation_id = r.id\n"
+            "    INNER JOIN {tenant_db}.operations o ON o.id = ro.operation_id\n"
+            "    INNER JOIN {tenant_db}.assets a ON a.id = r.asset_id\n\n"
+            "  Cas 3 — recommendation_assets seul (sans recommendations_v3) :\n"
+            "    FROM {tenant_db}.recommendation_assets ra\n"
+            "    INNER JOIN {tenant_db}.assets a ON a.id = ra.asset_id\n\n"
+            "  INTERDIT : mélanger ra et r dans la même requête.\n"
+            "  INTERDIT : ro.recommendation_id = ra.id  (ra n'a pas de recommendation_id)\n"
+            "  INTERDIT : rf.recommendation_id = ra.id  (même raison)\n"
         )
 
     # ------------------------------------------------------------------

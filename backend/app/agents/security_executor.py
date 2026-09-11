@@ -1,13 +1,3 @@
-# backend/app/agents/security_executor.py
-"""
-Fusion de :
-  - guardrails_v7.py   → GuardrailsV7
-  - sql_validator_v7.py → SQLValidatorV7
-  - sql_executor_v7.py  → SQLExecutorV7
-
-Aucune dépendance circulaire. Importer ce seul module à la place des trois anciens.
-"""
-
 from __future__ import annotations
 
 import re
@@ -54,7 +44,7 @@ class GuardrailsV7:
                 return {
                     "safe": False,
                     "reason": (
-                        f"🔒 Requête interdite : {reason}. "
+                        f" Requête interdite : {reason}. "
                         "Seules les lectures sont autorisées."
                     ),
                 }
@@ -67,7 +57,20 @@ class GuardrailsV7:
             return {"safe": False, "reason": "SQL dangereux détecté"}
         if not sql.strip().upper().startswith("SELECT"):
             return {"safe": False, "reason": "Seules les requêtes SELECT sont autorisées"}
+        FORBIDDEN_USER_COLUMNS = ["phone", "mobile", "company_id", "parent_id", "password", "remember_token"]
+
+        sql_lower = sql.lower()
+        if "users" in sql_lower:
+            for col in FORBIDDEN_USER_COLUMNS:
+                if re.search(rf'\b{col}\b', sql_lower):
+                    return {"safe": False, "reason": f" Accès interdit à la donnée utilisateur : '{col}'"}
+            # Vérifier jointure interdite avec companies
+            if "user_company" in sql_lower or (
+                "companies" in sql_lower and "users" in sql_lower
+            ):
+               return {"safe": False, "reason": " Accès à l'entreprise d'un utilisateur non autorisé."}
         return {"safe": True, "reason": None}
+    
 
     def check_tables_exist(self, tables: List[str], registry) -> Dict:
         unknown = [t for t in tables if not registry.get_table_schema(t)]
